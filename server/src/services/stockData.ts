@@ -1,15 +1,14 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-import YahooFinance from 'yahoo-finance2';
+import YahooFinanceDefault from 'yahoo-finance2';
 
-// Create instance and log available methods for debugging
-const yahooFinance = new (YahooFinance as any)();
+// The default export is a class - we need to access its static/default instance
+// In ESM, the module exports both the class and a pre-configured instance
+const yahooFinance = (YahooFinanceDefault as any).default || new (YahooFinanceDefault as any)();
 
 // Log what methods are actually available
+console.log('Yahoo Finance type:', typeof yahooFinance);
 console.log('Yahoo Finance available methods:', Object.keys(yahooFinance).filter(k => typeof yahooFinance[k] === 'function'));
-
-// Also try accessing the prototype methods
-const protoMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(yahooFinance)).filter(m => m !== 'constructor');
-console.log('Yahoo Finance prototype methods:', protoMethods);
+console.log('Yahoo Finance all keys:', Object.keys(yahooFinance));
 
 // Simple in-memory cache to reduce API calls and avoid rate limits
 const quoteCache = new Map<string, { data: any; timestamp: number }>();
