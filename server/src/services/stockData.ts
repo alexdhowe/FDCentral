@@ -1,33 +1,31 @@
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-import YahooFinanceDefault from 'yahoo-finance2';
+// Finnhub Stock Data Service - Much more reliable than Yahoo Finance
+const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || 'demo';
+const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
 
-// The default export is a class - we need to access its static/default instance
-// In ESM, the module exports both the class and a pre-configured instance
-const yahooFinance = (YahooFinanceDefault as any).default || new (YahooFinanceDefault as any)();
+// Simple in-memory cache to reduce API calls
+const cache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 30000; // 30 second cache for real-time feel
 
-// Log what methods are actually available
-console.log('Yahoo Finance type:', typeof yahooFinance);
-console.log('Yahoo Finance available methods:', Object.keys(yahooFinance).filter(k => typeof yahooFinance[k] === 'function'));
-console.log('Yahoo Finance all keys:', Object.keys(yahooFinance));
-
-// Simple in-memory cache to reduce API calls and avoid rate limits
-const quoteCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 60000; // 1 minute cache
-
-function getCachedQuote(symbol: string): any | null {
-  const cached = quoteCache.get(symbol);
+function getCached(key: string): any | null {
+  const cached = cache.get(key);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
     return cached.data;
   }
   return null;
 }
 
-function setCachedQuote(symbol: string, data: any): void {
-  quoteCache.set(symbol, { data, timestamp: Date.now() });
+function setCache(key: string, data: any): void {
+  cache.set(key, { data, timestamp: Date.now() });
 }
 
-// Rate limit helper - wait between requests
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+async function finnhubFetch(endpoint: string): Promise<any> {
+  const url = `${FINNHUB_BASE_URL}${endpoint}${endpoint.includes('?') ? '&' : '?'}token=${FINNHUB_API_KEY}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Finnhub API error: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
 
 export interface Quote {
   symbol: string;
@@ -75,77 +73,59 @@ export interface OptionContract {
 
 export async function getQuote(symbol: string): Promise<Quote | null> {
   try {
-    // Check cache first
-    const cached = getCachedQuote(symbol);
-    if (cached) {
-      return cached;
+    const cacheKey = `quote:${symbol}`;
+    const cached = getCached(cacheKey);
+    if (cached) return cached;
+
+    // Finnhub quote endpoint
+    const data = await finnhubFetch(`/quote?symbol=${symbol.toUpperCase()}`);
+
+    if (!data || data.c === 0) {
+      console.log(`No data for ${symbol}, returning null`);
+      return null;
     }
 
-    const quote = await yahooFinance.quote(symbol);
-
-    if (!quote) return null;
-
-    const result = {
-      symbol: quote.symbol,
-      price: quote.regularMarketPrice || 0,
-      change: quote.regularMarketChange || 0,
-      changePercent: quote.regularMarketChangePercent || 0,
-      volume: quote.regularMarketVolume || 0,
-      marketCap: quote.marketCap,
-      high: quote.regularMarketDayHigh || 0,
-      low: quote.regularMarketDayLow || 0,
-      open: quote.regularMarketOpen || 0,
-      previousClose: quote.regularMarketPreviousClose || 0,
+    const result: Quote = {
+      symbol: symbol.toUpperCase(),
+      price: data.c || 0,           // Current price
+      change: data.d || 0,          // Change
+      changePercent: data.dp || 0,  // Change percent
+      volume: 0,                    // Finnhub doesn't return volume in quote
+      high: data.h || 0,            // High of day
+      low: data.l || 0,             // Low of day
+      open: data.o || 0,            // Open
+      previousClose: data.pc || 0,  // Previous close
       timestamp: new Date()
     };
 
-    setCachedQuote(symbol, result);
+    setCache(cacheKey, result);
     return result;
   } catch (error: any) {
     console.error(`Error fetching quote for ${symbol}:`, error?.message || error);
-    // Return mock data on error to keep app functional
-    return {
-      symbol: symbol,
-      price: 0,
-      change: 0,
-      changePercent: 0,
-      volume: 0,
-      high: 0,
-      low: 0,
-      open: 0,
-      previousClose: 0,
-      timestamp: new Date()
-    };
+    return null;
   }
 }
 
 export async function getMultipleQuotes(symbols: string[]): Promise<Map<string, Quote>> {
   const quotes = new Map<string, Quote>();
 
-  // Yahoo Finance supports batch quotes
-  try {
-    const results = await yahooFinance.quote(symbols);
-    const quotesArray = Array.isArray(results) ? results : [results];
+  // Fetch quotes in parallel with small batches to respect rate limits
+  const batchSize = 10;
+  for (let i = 0; i < symbols.length; i += batchSize) {
+    const batch = symbols.slice(i, i + batchSize);
+    const promises = batch.map(symbol => getQuote(symbol));
+    const results = await Promise.all(promises);
 
-    for (const quote of quotesArray) {
-      if (quote && quote.symbol) {
-        quotes.set(quote.symbol, {
-          symbol: quote.symbol,
-          price: quote.regularMarketPrice || 0,
-          change: quote.regularMarketChange || 0,
-          changePercent: quote.regularMarketChangePercent || 0,
-          volume: quote.regularMarketVolume || 0,
-          marketCap: quote.marketCap,
-          high: quote.regularMarketDayHigh || 0,
-          low: quote.regularMarketDayLow || 0,
-          open: quote.regularMarketOpen || 0,
-          previousClose: quote.regularMarketPreviousClose || 0,
-          timestamp: new Date()
-        });
+    results.forEach((quote, idx) => {
+      if (quote) {
+        quotes.set(batch[idx], quote);
       }
+    });
+
+    // Small delay between batches to avoid rate limiting
+    if (i + batchSize < symbols.length) {
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
-  } catch (error) {
-    console.error('Error fetching multiple quotes:', error);
   }
 
   return quotes;
@@ -157,186 +137,143 @@ export async function getHistoricalData(
   interval: '1m' | '5m' | '15m' | '1h' | '1d' | '1wk' | '1mo' = '1d'
 ): Promise<HistoricalData[]> {
   try {
-    const endDate = new Date();
-    let startDate = new Date();
+    const cacheKey = `history:${symbol}:${period}:${interval}`;
+    const cached = getCached(cacheKey);
+    if (cached) return cached;
+
+    const now = Math.floor(Date.now() / 1000);
+    let from: number;
 
     switch (period) {
-      case '1d':
-        startDate.setDate(startDate.getDate() - 1);
-        break;
-      case '5d':
-        startDate.setDate(startDate.getDate() - 5);
-        break;
-      case '1mo':
-        startDate.setMonth(startDate.getMonth() - 1);
-        break;
-      case '3mo':
-        startDate.setMonth(startDate.getMonth() - 3);
-        break;
-      case '6mo':
-        startDate.setMonth(startDate.getMonth() - 6);
-        break;
-      case '1y':
-        startDate.setFullYear(startDate.getFullYear() - 1);
-        break;
-      case '2y':
-        startDate.setFullYear(startDate.getFullYear() - 2);
-        break;
-      case '5y':
-        startDate.setFullYear(startDate.getFullYear() - 5);
-        break;
-      case 'max':
-        startDate = new Date('1970-01-01');
-        break;
+      case '1d': from = now - 86400; break;
+      case '5d': from = now - 86400 * 5; break;
+      case '1mo': from = now - 86400 * 30; break;
+      case '3mo': from = now - 86400 * 90; break;
+      case '6mo': from = now - 86400 * 180; break;
+      case '1y': from = now - 86400 * 365; break;
+      case '2y': from = now - 86400 * 730; break;
+      case '5y': from = now - 86400 * 1825; break;
+      case 'max': from = now - 86400 * 3650; break;
+      default: from = now - 86400 * 30;
     }
 
-    const result = await yahooFinance.chart(symbol, {
-      period1: startDate,
-      period2: endDate,
-      interval
-    });
+    // Finnhub candles endpoint - D for daily
+    const resolution = interval === '1d' ? 'D' : interval === '1wk' ? 'W' : interval === '1mo' ? 'M' : 'D';
+    const data = await finnhubFetch(`/stock/candle?symbol=${symbol.toUpperCase()}&resolution=${resolution}&from=${from}&to=${now}`);
 
-    if (!result || !result.quotes) return [];
+    if (!data || data.s === 'no_data' || !data.c) {
+      return [];
+    }
 
-    return result.quotes.map((q: any) => ({
-      date: new Date(q.date),
-      open: q.open || 0,
-      high: q.high || 0,
-      low: q.low || 0,
-      close: q.close || 0,
-      volume: q.volume || 0
+    const result: HistoricalData[] = data.t.map((timestamp: number, i: number) => ({
+      date: new Date(timestamp * 1000),
+      open: data.o[i] || 0,
+      high: data.h[i] || 0,
+      low: data.l[i] || 0,
+      close: data.c[i] || 0,
+      volume: data.v[i] || 0
     }));
-  } catch (error) {
-    console.error(`Error fetching historical data for ${symbol}:`, error);
+
+    setCache(cacheKey, result);
+    return result;
+  } catch (error: any) {
+    console.error(`Error fetching historical data for ${symbol}:`, error?.message || error);
     return [];
   }
 }
 
 export async function getOptionChain(symbol: string, expirationDate?: Date): Promise<OptionChain | null> {
-  try {
-    // Check if options method exists (not available in all yahoo-finance2 builds)
-    if (typeof yahooFinance.options !== 'function') {
-      console.log('Options API not available, returning placeholder data');
-      // Return placeholder structure
-      const expDate = new Date();
-      expDate.setDate(expDate.getDate() + 30);
-      return {
-        expirationDates: [expDate],
-        calls: [],
-        puts: []
-      };
-    }
-
-    const options = await yahooFinance.options(symbol, {
-      date: expirationDate
-    });
-
-    if (!options) return null;
-
-    const calls: OptionContract[] = (options.options[0]?.calls || []).map((call: any) => ({
-      contractSymbol: call.contractSymbol,
-      strike: call.strike || 0,
-      expiration: new Date(options.options[0]?.expirationDate || Date.now()),
-      type: 'call' as const,
-      lastPrice: call.lastPrice || 0,
-      bid: call.bid || 0,
-      ask: call.ask || 0,
-      volume: call.volume || 0,
-      openInterest: call.openInterest || 0,
-      impliedVolatility: call.impliedVolatility || 0,
-      inTheMoney: call.inTheMoney || false,
-      percentChange: call.percentChange || 0
-    }));
-
-    const puts: OptionContract[] = (options.options[0]?.puts || []).map((put: any) => ({
-      contractSymbol: put.contractSymbol,
-      strike: put.strike || 0,
-      expiration: new Date(options.options[0]?.expirationDate || Date.now()),
-      type: 'put' as const,
-      lastPrice: put.lastPrice || 0,
-      bid: put.bid || 0,
-      ask: put.ask || 0,
-      volume: put.volume || 0,
-      openInterest: put.openInterest || 0,
-      impliedVolatility: put.impliedVolatility || 0,
-      inTheMoney: put.inTheMoney || false,
-      percentChange: put.percentChange || 0
-    }));
-
-    return {
-      expirationDates: options.expirationDates.map((d: any) => new Date(d)),
-      calls,
-      puts
-    };
-  } catch (error: any) {
-    console.error(`Error fetching options for ${symbol}:`, error?.message || error);
-    // Return empty structure on error
-    return {
-      expirationDates: [],
-      calls: [],
-      puts: []
-    };
-  }
+  // Finnhub doesn't have free options data - return placeholder
+  // For options, you'd need a paid API like Tradier or polygon.io
+  console.log('Options data requires premium API - returning placeholder');
+  return {
+    expirationDates: [],
+    calls: [],
+    puts: []
+  };
 }
 
 export async function searchSymbols(query: string): Promise<{ symbol: string; name: string; type: string }[]> {
   try {
-    const results = await yahooFinance.search(query);
+    const cacheKey = `search:${query}`;
+    const cached = getCached(cacheKey);
+    if (cached) return cached;
 
-    return (results.quotes || [])
-      .filter((q: any) => q.symbol && (q.quoteType === 'EQUITY' || q.quoteType === 'ETF'))
+    const data = await finnhubFetch(`/search?q=${encodeURIComponent(query)}`);
+
+    if (!data || !data.result) {
+      return [];
+    }
+
+    const result = data.result
+      .filter((item: any) => item.type === 'Common Stock' || item.type === 'ETF')
       .slice(0, 10)
-      .map((q: any) => ({
-        symbol: q.symbol,
-        name: q.shortname || q.longname || q.symbol,
-        type: q.quoteType || 'EQUITY'
+      .map((item: any) => ({
+        symbol: item.symbol,
+        name: item.description || item.symbol,
+        type: item.type === 'Common Stock' ? 'EQUITY' : 'ETF'
       }));
-  } catch (error) {
-    console.error('Search error:', error);
+
+    setCache(cacheKey, result);
+    return result;
+  } catch (error: any) {
+    console.error('Search error:', error?.message || error);
     return [];
   }
 }
 
 export async function getTrendingStocks(): Promise<{ symbol: string; name: string }[]> {
-  try {
-    const trending = await yahooFinance.trendingSymbols('US');
-
-    return (trending.quotes || []).slice(0, 20).map((q: any) => ({
-      symbol: q.symbol || '',
-      name: q.shortName || q.symbol || ''
-    }));
-  } catch (error) {
-    console.error('Trending error:', error);
-    // Return popular defaults
-    return [
-      { symbol: 'AAPL', name: 'Apple Inc.' },
-      { symbol: 'MSFT', name: 'Microsoft Corporation' },
-      { symbol: 'GOOGL', name: 'Alphabet Inc.' },
-      { symbol: 'AMZN', name: 'Amazon.com Inc.' },
-      { symbol: 'TSLA', name: 'Tesla Inc.' },
-      { symbol: 'NVDA', name: 'NVIDIA Corporation' },
-      { symbol: 'META', name: 'Meta Platforms Inc.' },
-      { symbol: 'SPY', name: 'SPDR S&P 500 ETF' },
-      { symbol: 'QQQ', name: 'Invesco QQQ Trust' },
-      { symbol: 'AMD', name: 'Advanced Micro Devices' }
-    ];
-  }
+  // Finnhub doesn't have a trending endpoint on free tier
+  // Return popular stocks as default
+  return [
+    { symbol: 'AAPL', name: 'Apple Inc.' },
+    { symbol: 'MSFT', name: 'Microsoft Corporation' },
+    { symbol: 'GOOGL', name: 'Alphabet Inc.' },
+    { symbol: 'AMZN', name: 'Amazon.com Inc.' },
+    { symbol: 'TSLA', name: 'Tesla Inc.' },
+    { symbol: 'NVDA', name: 'NVIDIA Corporation' },
+    { symbol: 'META', name: 'Meta Platforms Inc.' },
+    { symbol: 'SPY', name: 'SPDR S&P 500 ETF' },
+    { symbol: 'QQQ', name: 'Invesco QQQ Trust' },
+    { symbol: 'AMD', name: 'Advanced Micro Devices' }
+  ];
 }
 
 export async function getCompanyInfo(symbol: string) {
   try {
-    const quoteSummary = await yahooFinance.quoteSummary(symbol, {
-      modules: ['summaryProfile', 'summaryDetail', 'financialData', 'defaultKeyStatistics']
-    });
+    const cacheKey = `company:${symbol}`;
+    const cached = getCached(cacheKey);
+    if (cached) return cached;
 
-    return {
-      profile: quoteSummary.summaryProfile,
-      details: quoteSummary.summaryDetail,
-      financials: quoteSummary.financialData,
-      keyStats: quoteSummary.defaultKeyStatistics
+    const [profile, metrics] = await Promise.all([
+      finnhubFetch(`/stock/profile2?symbol=${symbol.toUpperCase()}`),
+      finnhubFetch(`/stock/metric?symbol=${symbol.toUpperCase()}&metric=all`)
+    ]);
+
+    const result = {
+      profile: {
+        name: profile.name,
+        industry: profile.finnhubIndustry,
+        sector: profile.finnhubIndustry,
+        website: profile.weburl,
+        description: `${profile.name} is a company in the ${profile.finnhubIndustry} industry.`,
+        country: profile.country,
+        exchange: profile.exchange,
+        ipo: profile.ipo,
+        logo: profile.logo
+      },
+      details: {
+        marketCap: profile.marketCapitalization * 1000000,
+        sharesOutstanding: profile.shareOutstanding * 1000000
+      },
+      financials: metrics.metric || {},
+      keyStats: metrics.metric || {}
     };
-  } catch (error) {
-    console.error(`Error fetching company info for ${symbol}:`, error);
+
+    setCache(cacheKey, result);
+    return result;
+  } catch (error: any) {
+    console.error(`Error fetching company info for ${symbol}:`, error?.message || error);
     return null;
   }
 }

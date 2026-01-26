@@ -27,6 +27,8 @@ services:
         generateValue: true
       - key: CLIENT_URL
         value: https://fdcentral.onrender.com
+      - key: FINNHUB_API_KEY
+        sync: false  # Set this manually in Render dashboard
 
   # Frontend Static Site
   - type: web
