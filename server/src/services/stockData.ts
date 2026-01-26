@@ -48,9 +48,6 @@ export interface OptionContract {
   percentChange: number;
 }
 
-// Suppress Yahoo Finance notices
-yahooFinance.suppressNotices(['yahooSurvey']);
-
 export async function getQuote(symbol: string): Promise<Quote | null> {
   try {
     const quote = await yahooFinance.quote(symbol);
