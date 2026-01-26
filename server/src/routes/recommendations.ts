@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
-import { query } from '../db';
-import { AuthRequest } from '../middleware/auth';
-import { getQuote, getHistoricalData, getOptionChain } from '../services/stockData';
+import { query } from '../db/index.js';
+import { AuthRequest } from '../middleware/auth.js';
+import { getQuote, getHistoricalData, getOptionChain } from '../services/stockData.js';
 import {
   calculateIndicators,
   generateSignals,
@@ -10,7 +10,7 @@ import {
   TechnicalIndicators,
   SignalScore,
   HistoricalBar
-} from '../services/technicalAnalysis';
+} from '../services/technicalAnalysis.js';
 
 const router = Router();
 

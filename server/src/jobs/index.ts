@@ -1,8 +1,8 @@
 import cron from 'node-cron';
 import { Server } from 'socket.io';
-import { query } from '../db';
-import { getQuote, getMultipleQuotes } from '../services/stockData';
-import { emitToUser, emitStockUpdate } from '../socket';
+import { query } from '../db/index.js';
+import { getQuote, getMultipleQuotes } from '../services/stockData.js';
+import { emitToUser, emitStockUpdate } from '../socket/index.js';
 
 export function startScheduledJobs(io: Server) {
   console.log('📅 Starting scheduled jobs...');

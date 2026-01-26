@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
-import { AuthRequest } from '../middleware/auth';
-import { getOptionChain, getQuote } from '../services/stockData';
+import { AuthRequest } from '../middleware/auth.js';
+import { getOptionChain, getQuote } from '../services/stockData.js';
 
 const router = Router();
 

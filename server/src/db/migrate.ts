@@ -1,4 +1,4 @@
-import { query } from './index';
+import { query } from './index.js';
 import dotenv from 'dotenv';
 
 dotenv.config();

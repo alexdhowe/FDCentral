@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
-import { AuthRequest } from '../middleware/auth';
-import { query } from '../db';
+import { AuthRequest } from '../middleware/auth.js';
+import { query } from '../db/index.js';
 import {
   getQuote,
   getMultipleQuotes,
@@ -8,7 +8,7 @@ import {
   searchSymbols,
   getTrendingStocks,
   getCompanyInfo
-} from '../services/stockData';
+} from '../services/stockData.js';
 
 const router = Router();
 

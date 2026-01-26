@@ -5,16 +5,16 @@ import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 import path from 'path';
 
-import { authRouter } from './routes/auth';
-import { watchlistRouter } from './routes/watchlist';
-import { stocksRouter } from './routes/stocks';
-import { optionsRouter } from './routes/options';
-import { recommendationsRouter } from './routes/recommendations';
-import { alertsRouter } from './routes/alerts';
-import { chatRouter } from './routes/chat';
-import { setupSocketHandlers } from './socket';
-import { startScheduledJobs } from './jobs';
-import { authenticateToken } from './middleware/auth';
+import { authRouter } from './routes/auth.js';
+import { watchlistRouter } from './routes/watchlist.js';
+import { stocksRouter } from './routes/stocks.js';
+import { optionsRouter } from './routes/options.js';
+import { recommendationsRouter } from './routes/recommendations.js';
+import { alertsRouter } from './routes/alerts.js';
+import { chatRouter } from './routes/chat.js';
+import { setupSocketHandlers } from './socket/index.js';
+import { startScheduledJobs } from './jobs/index.js';
+import { authenticateToken } from './middleware/auth.js';
 
 dotenv.config();
 

@@ -1,6 +1,6 @@
 import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
-import { query } from '../db';
+import { query } from '../db/index.js';
 
 interface AuthenticatedSocket extends Socket {
   user?: {
