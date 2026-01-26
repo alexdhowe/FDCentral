@@ -2,6 +2,15 @@ import { Router, Response } from 'express';
 import { query } from '../db';
 import { AuthRequest } from '../middleware/auth';
 import { getQuote, getHistoricalData, getOptionChain } from '../services/stockData';
+import {
+  calculateIndicators,
+  generateSignals,
+  calculateStopLoss,
+  calculateTarget,
+  TechnicalIndicators,
+  SignalScore,
+  HistoricalBar
+} from '../services/technicalAnalysis';
 
 const router = Router();
 
@@ -108,174 +117,268 @@ router.post('/', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Generate AI recommendation for a symbol
+/**
+ * ADVANCED AI RECOMMENDATION ENGINE
+ * Uses multi-indicator technical analysis for profitable trading signals
+ */
 router.post('/generate/:symbol', async (req: AuthRequest, res: Response) => {
   try {
     const { symbol } = req.params;
+    const upperSymbol = symbol.toUpperCase();
+
+    console.log(`🚀 Generating tendies recommendation for ${upperSymbol}...`);
 
     // Get current quote and historical data
-    const quote = await getQuote(symbol.toUpperCase());
-    const history = await getHistoricalData(symbol.toUpperCase(), '3mo', '1d');
+    const [quote, dailyHistory, weeklyHistory] = await Promise.all([
+      getQuote(upperSymbol),
+      getHistoricalData(upperSymbol, '6mo', '1d'),
+      getHistoricalData(upperSymbol, '1y', '1wk')
+    ]);
 
-    if (!quote || history.length < 20) {
-      return res.status(400).json({ error: 'Insufficient data for analysis' });
+    if (!quote) {
+      return res.status(400).json({ error: 'Could not fetch quote data' });
     }
 
-    // Simple technical analysis
-    const prices = history.map(h => h.close);
-    const volumes = history.map(h => h.volume);
-
-    // Calculate moving averages
-    const sma20 = prices.slice(-20).reduce((a, b) => a + b, 0) / 20;
-    const sma50 = prices.length >= 50
-      ? prices.slice(-50).reduce((a, b) => a + b, 0) / 50
-      : sma20;
-
-    // Calculate RSI
-    const changes = prices.slice(1).map((p, i) => p - prices[i]);
-    const gains = changes.map(c => c > 0 ? c : 0);
-    const losses = changes.map(c => c < 0 ? -c : 0);
-    const avgGain = gains.slice(-14).reduce((a, b) => a + b, 0) / 14;
-    const avgLoss = losses.slice(-14).reduce((a, b) => a + b, 0) / 14;
-    const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-    const rsi = 100 - (100 / (1 + rs));
-
-    // Calculate MACD
-    const ema12 = calculateEMA(prices, 12);
-    const ema26 = calculateEMA(prices, 26);
-    const macd = ema12 - ema26;
-
-    // Volume trend
-    const avgVolume = volumes.slice(-20).reduce((a, b) => a + b, 0) / 20;
-    const recentVolume = volumes.slice(-5).reduce((a, b) => a + b, 0) / 5;
-    const volumeTrend = recentVolume > avgVolume * 1.2 ? 'increasing' : 'normal';
-
-    // Generate recommendation
-    let recommendation = 'hold';
-    let confidence = 50;
-    let reasoning = [];
-
-    // Trend analysis
-    if (quote.price > sma20 && sma20 > sma50) {
-      reasoning.push('Price above both 20 and 50 SMA (bullish trend)');
-      confidence += 10;
-    } else if (quote.price < sma20 && sma20 < sma50) {
-      reasoning.push('Price below both 20 and 50 SMA (bearish trend)');
-      confidence += 10;
+    if (dailyHistory.length < 50) {
+      return res.status(400).json({ error: 'Insufficient historical data (need 50+ days)' });
     }
 
-    // RSI analysis
-    if (rsi < 30) {
-      reasoning.push(`RSI at ${rsi.toFixed(1)} indicates oversold conditions`);
+    // Convert to HistoricalBar format
+    const bars: HistoricalBar[] = dailyHistory.map(d => ({
+      date: new Date(d.date),
+      open: d.open,
+      high: d.high,
+      low: d.low,
+      close: d.close,
+      volume: d.volume
+    }));
+
+    // Calculate all technical indicators
+    let indicators: TechnicalIndicators;
+    try {
+      indicators = calculateIndicators(bars);
+    } catch (e) {
+      console.error('Indicator calculation error:', e);
+      return res.status(400).json({ error: 'Failed to calculate indicators' });
+    }
+
+    // Generate trading signals
+    const signalScore = generateSignals(indicators, quote.price);
+
+    // Determine recommendation based on score
+    let recommendation: 'buy' | 'sell' | 'hold';
+    let emojiPrefix: string;
+
+    if (signalScore.score >= 30) {
       recommendation = 'buy';
-      confidence += 15;
-    } else if (rsi > 70) {
-      reasoning.push(`RSI at ${rsi.toFixed(1)} indicates overbought conditions`);
+      emojiPrefix = '🚀';
+    } else if (signalScore.score <= -30) {
       recommendation = 'sell';
-      confidence += 15;
+      emojiPrefix = '🐻';
     } else {
-      reasoning.push(`RSI at ${rsi.toFixed(1)} is neutral`);
+      recommendation = 'hold';
+      emojiPrefix = '🤔';
     }
 
-    // MACD
-    if (macd > 0) {
-      reasoning.push('MACD is positive (bullish momentum)');
-      if (recommendation !== 'sell') {
-        recommendation = 'buy';
-        confidence += 5;
-      }
-    } else {
-      reasoning.push('MACD is negative (bearish momentum)');
-      if (recommendation !== 'buy') {
-        recommendation = 'sell';
-        confidence += 5;
-      }
+    // Only generate strong recommendations (skip weak signals)
+    if (Math.abs(signalScore.score) < 20 && signalScore.confidence < 60) {
+      return res.json({
+        message: 'No strong signal detected - waiting for better setup',
+        analysis: {
+          score: signalScore.score,
+          confidence: signalScore.confidence,
+          signals: signalScore.signals
+        }
+      });
     }
 
-    // Volume
-    if (volumeTrend === 'increasing') {
-      reasoning.push('Volume is increasing, confirming the trend');
-      confidence += 5;
-    }
+    // Calculate optimal stop loss and target using ATR
+    const direction = recommendation === 'buy' ? 'long' : 'short';
+    const stopLoss = calculateStopLoss(quote.price, indicators.atr, direction, 2);
 
-    // Calculate targets
-    const volatility = calculateVolatility(prices);
-    const targetMultiplier = recommendation === 'buy' ? 1 + volatility : 1 - volatility;
-    const stopMultiplier = recommendation === 'buy' ? 1 - volatility * 0.5 : 1 + volatility * 0.5;
+    // Use 2:1 reward/risk for targets, or 3:1 for high confidence
+    const rrRatio = signalScore.confidence > 75 ? 3 : 2;
+    const targetPrice = calculateTarget(quote.price, stopLoss, rrRatio);
 
-    const targetPrice = quote.price * targetMultiplier;
-    const stopLoss = quote.price * stopMultiplier;
+    // Calculate risk/reward metrics
+    const riskPercent = Math.abs((quote.price - stopLoss) / quote.price * 100);
+    const rewardPercent = Math.abs((targetPrice - quote.price) / quote.price * 100);
+
+    // Build reasoning from signals
+    const topSignals = signalScore.signals
+      .sort((a, b) => b.strength - a.strength)
+      .slice(0, 5);
+
+    const reasoning = [
+      `${emojiPrefix} ${recommendation.toUpperCase()} SIGNAL (Score: ${signalScore.score}/100)`,
+      '',
+      '📊 KEY SIGNALS:',
+      ...topSignals.map(s => `• ${s.description}`),
+      '',
+      '📈 TREND ANALYSIS:',
+      `• Trend Strength: ${indicators.trendStrength.toUpperCase()} (ADX: ${indicators.adx.toFixed(1)})`,
+      `• Price vs 50 SMA: ${quote.price > indicators.sma50 ? 'ABOVE ✅' : 'BELOW ❌'}`,
+      `• RSI: ${indicators.rsi.toFixed(1)} (${indicators.rsiTrend})`,
+      '',
+      '💰 TRADE SETUP:',
+      `• Entry: $${quote.price.toFixed(2)}`,
+      `• Target: $${targetPrice.toFixed(2)} (+${rewardPercent.toFixed(1)}%)`,
+      `• Stop Loss: $${stopLoss.toFixed(2)} (-${riskPercent.toFixed(1)}%)`,
+      `• Risk/Reward: 1:${rrRatio}`,
+      '',
+      `🎯 Confidence: ${signalScore.confidence}%`
+    ].join('\n');
 
     // Check for options play
     let optionsRecommendation = null;
-    try {
-      const chain = await getOptionChain(symbol.toUpperCase());
-      if (chain && chain.calls.length > 0) {
-        // Find ATM options ~30 days out
-        const atmCalls = chain.calls.filter(c =>
-          Math.abs(c.strike - quote.price) < quote.price * 0.05 &&
-          c.volume > 100
-        );
-        const atmPuts = chain.puts.filter(p =>
-          Math.abs(p.strike - quote.price) < quote.price * 0.05 &&
-          p.volume > 100
-        );
+    let optionsAnalysis = null;
 
-        if (recommendation === 'buy' && atmCalls.length > 0) {
-          const bestCall = atmCalls.sort((a, b) => b.volume - a.volume)[0];
-          optionsRecommendation = {
-            type: 'call',
-            strike: bestCall.strike,
-            expiration: bestCall.expiration,
-            premium: bestCall.lastPrice,
-            impliedVolatility: bestCall.impliedVolatility
-          };
-        } else if (recommendation === 'sell' && atmPuts.length > 0) {
-          const bestPut = atmPuts.sort((a, b) => b.volume - a.volume)[0];
-          optionsRecommendation = {
-            type: 'put',
-            strike: bestPut.strike,
-            expiration: bestPut.expiration,
-            premium: bestPut.lastPrice,
-            impliedVolatility: bestPut.impliedVolatility
-          };
+    try {
+      const chain = await getOptionChain(upperSymbol);
+      if (chain && chain.expirationDates.length > 0) {
+        // Find options 30-45 days out (optimal theta decay)
+        const targetExpiry = new Date();
+        targetExpiry.setDate(targetExpiry.getDate() + 35);
+
+        const calls = chain.calls.filter(c => c.volume > 50 && c.openInterest > 100);
+        const puts = chain.puts.filter(p => p.volume > 50 && p.openInterest > 100);
+
+        if (recommendation === 'buy' && calls.length > 0) {
+          // Find slightly OTM call for leverage
+          const otmCalls = calls
+            .filter(c => c.strike >= quote.price && c.strike <= quote.price * 1.05)
+            .sort((a, b) => b.volume - a.volume);
+
+          if (otmCalls.length > 0) {
+            const bestCall = otmCalls[0];
+
+            // Calculate expected return
+            const intrinsicAtTarget = Math.max(0, targetPrice - bestCall.strike);
+            const expectedReturn = ((intrinsicAtTarget - bestCall.lastPrice) / bestCall.lastPrice * 100);
+
+            optionsRecommendation = {
+              type: 'call',
+              strike: bestCall.strike,
+              expiration: bestCall.expiration,
+              premium: bestCall.lastPrice,
+              impliedVolatility: bestCall.impliedVolatility,
+              delta: 0.5, // Approximate
+              breakeven: bestCall.strike + bestCall.lastPrice,
+              expectedReturn: expectedReturn.toFixed(1) + '%',
+              maxLoss: bestCall.lastPrice * 100
+            };
+
+            optionsAnalysis = {
+              unusualActivity: bestCall.volume > bestCall.openInterest * 0.5,
+              ivPercentile: 'N/A', // Would need historical IV
+              recommendation: expectedReturn > 100 ? 'STRONG BUY' : expectedReturn > 50 ? 'BUY' : 'SPECULATIVE'
+            };
+          }
+        } else if (recommendation === 'sell' && puts.length > 0) {
+          // Find slightly OTM put
+          const otmPuts = puts
+            .filter(p => p.strike <= quote.price && p.strike >= quote.price * 0.95)
+            .sort((a, b) => b.volume - a.volume);
+
+          if (otmPuts.length > 0) {
+            const bestPut = otmPuts[0];
+
+            const intrinsicAtTarget = Math.max(0, bestPut.strike - targetPrice);
+            const expectedReturn = ((intrinsicAtTarget - bestPut.lastPrice) / bestPut.lastPrice * 100);
+
+            optionsRecommendation = {
+              type: 'put',
+              strike: bestPut.strike,
+              expiration: bestPut.expiration,
+              premium: bestPut.lastPrice,
+              impliedVolatility: bestPut.impliedVolatility,
+              delta: -0.5,
+              breakeven: bestPut.strike - bestPut.lastPrice,
+              expectedReturn: expectedReturn.toFixed(1) + '%',
+              maxLoss: bestPut.lastPrice * 100
+            };
+
+            optionsAnalysis = {
+              unusualActivity: bestPut.volume > bestPut.openInterest * 0.5,
+              ivPercentile: 'N/A',
+              recommendation: expectedReturn > 100 ? 'STRONG BUY' : expectedReturn > 50 ? 'BUY' : 'SPECULATIVE'
+            };
+          }
         }
       }
     } catch (e) {
-      // Options data not available
+      console.log('Options data not available for', upperSymbol);
     }
 
-    // Save recommendation
+    // Save recommendation to database
     const result = await query(
       `INSERT INTO recommendations
        (symbol, recommendation_type, entry_price, target_price, stop_loss, option_details, reasoning, confidence_score, created_by)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [
-        symbol.toUpperCase(),
+        upperSymbol,
         optionsRecommendation ? `options_${optionsRecommendation.type}` : recommendation,
         quote.price,
         targetPrice,
         stopLoss,
         optionsRecommendation ? JSON.stringify(optionsRecommendation) : null,
-        reasoning.join('. ') + '.',
-        Math.min(confidence, 95),
+        reasoning,
+        signalScore.confidence,
         req.user!.id
       ]
     );
+
+    console.log(`✅ Generated ${recommendation} recommendation for ${upperSymbol} with ${signalScore.confidence}% confidence`);
 
     res.json({
       recommendation: result.rows[0],
       analysis: {
         currentPrice: quote.price,
-        sma20,
-        sma50,
-        rsi,
-        macd,
-        volumeTrend,
-        volatility: (volatility * 100).toFixed(2) + '%'
+        score: signalScore.score,
+        confidence: signalScore.confidence,
+        signals: signalScore.signals,
+        indicators: {
+          rsi: indicators.rsi.toFixed(1),
+          macd: indicators.macd.toFixed(4),
+          macdSignal: indicators.macdSignal.toFixed(4),
+          macdCrossover: indicators.macdCrossover,
+          adx: indicators.adx.toFixed(1),
+          trendStrength: indicators.trendStrength,
+          bollingerPosition: (indicators.bollingerPosition * 100).toFixed(1) + '%',
+          volumeRatio: indicators.volumeRatio.toFixed(2) + 'x',
+          obvTrend: indicators.obvTrend,
+          atr: indicators.atr.toFixed(2),
+          atrPercent: indicators.atrPercent.toFixed(2) + '%'
+        },
+        movingAverages: {
+          sma20: indicators.sma20.toFixed(2),
+          sma50: indicators.sma50.toFixed(2),
+          sma200: indicators.sma200.toFixed(2),
+          priceVsSma20: ((quote.price / indicators.sma20 - 1) * 100).toFixed(2) + '%',
+          priceVsSma50: ((quote.price / indicators.sma50 - 1) * 100).toFixed(2) + '%'
+        },
+        levels: {
+          support1: indicators.support1.toFixed(2),
+          support2: indicators.support2.toFixed(2),
+          resistance1: indicators.resistance1.toFixed(2),
+          resistance2: indicators.resistance2.toFixed(2),
+          pivotPoint: indicators.pivotPoint.toFixed(2)
+        },
+        riskReward: {
+          stopLoss: stopLoss.toFixed(2),
+          target: targetPrice.toFixed(2),
+          riskPercent: riskPercent.toFixed(2) + '%',
+          rewardPercent: rewardPercent.toFixed(2) + '%',
+          ratio: `1:${rrRatio}`
+        },
+        options: optionsRecommendation ? {
+          ...optionsRecommendation,
+          analysis: optionsAnalysis
+        } : null
       }
     });
+
   } catch (error) {
     console.error('Generate recommendation error:', error);
     res.status(500).json({ error: 'Failed to generate recommendation' });
@@ -337,23 +440,66 @@ router.post('/:id/close', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Helper functions
-function calculateEMA(prices: number[], period: number): number {
-  const k = 2 / (period + 1);
-  let ema = prices.slice(0, period).reduce((a, b) => a + b, 0) / period;
+// Scan for opportunities across multiple symbols
+router.post('/scan', async (req: AuthRequest, res: Response) => {
+  try {
+    const { symbols } = req.body;
 
-  for (let i = period; i < prices.length; i++) {
-    ema = prices[i] * k + ema * (1 - k);
+    if (!symbols || !Array.isArray(symbols) || symbols.length === 0) {
+      return res.status(400).json({ error: 'Provide array of symbols to scan' });
+    }
+
+    const opportunities: any[] = [];
+
+    for (const symbol of symbols.slice(0, 10)) { // Limit to 10 symbols
+      try {
+        const [quote, history] = await Promise.all([
+          getQuote(symbol),
+          getHistoricalData(symbol, '3mo', '1d')
+        ]);
+
+        if (!quote || history.length < 50) continue;
+
+        const bars: HistoricalBar[] = history.map(d => ({
+          date: new Date(d.date),
+          open: d.open,
+          high: d.high,
+          low: d.low,
+          close: d.close,
+          volume: d.volume
+        }));
+
+        const indicators = calculateIndicators(bars);
+        const signalScore = generateSignals(indicators, quote.price);
+
+        if (Math.abs(signalScore.score) >= 30) {
+          opportunities.push({
+            symbol,
+            price: quote.price,
+            changePercent: quote.changePercent,
+            score: signalScore.score,
+            confidence: signalScore.confidence,
+            signal: signalScore.score > 0 ? 'BULLISH' : 'BEARISH',
+            topReason: signalScore.signals[0]?.description
+          });
+        }
+      } catch (e) {
+        console.log(`Scan error for ${symbol}:`, e);
+      }
+    }
+
+    // Sort by absolute score
+    opportunities.sort((a, b) => Math.abs(b.score) - Math.abs(a.score));
+
+    res.json({
+      scanned: symbols.length,
+      opportunities
+    });
+
+  } catch (error) {
+    console.error('Scan error:', error);
+    res.status(500).json({ error: 'Failed to scan symbols' });
   }
-
-  return ema;
-}
-
-function calculateVolatility(prices: number[]): number {
-  const returns = prices.slice(1).map((p, i) => Math.log(p / prices[i]));
-  const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
-  const variance = returns.reduce((sum, r) => sum + Math.pow(r - mean, 2), 0) / returns.length;
-  return Math.sqrt(variance * 252); // Annualized
-}
+});
 
 export { router as recommendationsRouter };
