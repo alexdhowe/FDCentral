@@ -1,4 +1,8 @@
-import yahooFinance from 'yahoo-finance2';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+import yahooFinanceModule from 'yahoo-finance2';
+
+// yahoo-finance2 v2.x has incomplete type definitions - cast to any for runtime methods
+const yahooFinance = yahooFinanceModule as any;
 
 export interface Quote {
   symbol: string;
@@ -151,7 +155,7 @@ export async function getHistoricalData(
 
     if (!result || !result.quotes) return [];
 
-    return result.quotes.map(q => ({
+    return result.quotes.map((q: any) => ({
       date: new Date(q.date),
       open: q.open || 0,
       high: q.high || 0,
@@ -173,7 +177,7 @@ export async function getOptionChain(symbol: string, expirationDate?: Date): Pro
 
     if (!options) return null;
 
-    const calls: OptionContract[] = (options.options[0]?.calls || []).map(call => ({
+    const calls: OptionContract[] = (options.options[0]?.calls || []).map((call: any) => ({
       contractSymbol: call.contractSymbol,
       strike: call.strike || 0,
       expiration: new Date(options.options[0]?.expirationDate || Date.now()),
@@ -188,7 +192,7 @@ export async function getOptionChain(symbol: string, expirationDate?: Date): Pro
       percentChange: call.percentChange || 0
     }));
 
-    const puts: OptionContract[] = (options.options[0]?.puts || []).map(put => ({
+    const puts: OptionContract[] = (options.options[0]?.puts || []).map((put: any) => ({
       contractSymbol: put.contractSymbol,
       strike: put.strike || 0,
       expiration: new Date(options.options[0]?.expirationDate || Date.now()),
@@ -204,7 +208,7 @@ export async function getOptionChain(symbol: string, expirationDate?: Date): Pro
     }));
 
     return {
-      expirationDates: options.expirationDates.map(d => new Date(d)),
+      expirationDates: options.expirationDates.map((d: any) => new Date(d)),
       calls,
       puts
     };
@@ -219,9 +223,9 @@ export async function searchSymbols(query: string): Promise<{ symbol: string; na
     const results = await yahooFinance.search(query);
 
     return (results.quotes || [])
-      .filter(q => q.symbol && (q.quoteType === 'EQUITY' || q.quoteType === 'ETF'))
+      .filter((q: any) => q.symbol && (q.quoteType === 'EQUITY' || q.quoteType === 'ETF'))
       .slice(0, 10)
-      .map(q => ({
+      .map((q: any) => ({
         symbol: q.symbol,
         name: q.shortname || q.longname || q.symbol,
         type: q.quoteType || 'EQUITY'
@@ -236,7 +240,7 @@ export async function getTrendingStocks(): Promise<{ symbol: string; name: strin
   try {
     const trending = await yahooFinance.trendingSymbols('US');
 
-    return (trending.quotes || []).slice(0, 20).map(q => ({
+    return (trending.quotes || []).slice(0, 20).map((q: any) => ({
       symbol: q.symbol || '',
       name: q.shortName || q.symbol || ''
     }));
