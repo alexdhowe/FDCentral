@@ -1,12 +1,17 @@
-# Render Blueprint - FDCentral Stock & Options Platform
-# Deploy with: https://render.com/deploy
+# Render Blueprint - FD Central
+# Deploy: https://render.com/deploy?repo=https://github.com/alexdhowe/FDCentral
+
+databases:
+  - name: fdcentral-db
+    plan: free
+    databaseName: fdcentral
+    user: fdcentral
 
 services:
-  # Backend API Server
+  # Backend API
   - type: web
     name: fdcentral-api
     runtime: node
-    region: oregon
     plan: free
     buildCommand: npm install && npm run build:server
     startCommand: npm run start
@@ -14,8 +19,6 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 3001
       - key: DATABASE_URL
         fromDatabase:
           name: fdcentral-db
@@ -30,25 +33,11 @@ services:
     name: fdcentral
     runtime: static
     buildCommand: npm install && npm run build:client
-    staticPublishPath: ./client/dist
-    pullRequestPreviewsEnabled: true
-    headers:
-      - path: /*
-        name: Cache-Control
-        value: public, max-age=0, must-revalidate
+    staticPublishPath: client/dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://fdcentral-api.onrender.com
     routes:
-      - type: rewrite
-        source: /api/*
-        destination: https://fdcentral-api.onrender.com/api/*
-      - type: rewrite
-        source: /socket.io/*
-        destination: https://fdcentral-api.onrender.com/socket.io/*
       - type: rewrite
         source: /*
         destination: /index.html
-
-databases:
-  - name: fdcentral-db
-    plan: free
-    region: oregon
-    postgresMajorVersion: 15

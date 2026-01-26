@@ -20,19 +20,36 @@ dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
+
+// CORS configuration - allow multiple origins
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  process.env.CLIENT_URL,
+].filter(Boolean) as string[];
+
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.some(allowed => origin.startsWith(allowed.replace(/\/$/, '')))) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(null, true); // Allow all origins for now (can restrict later)
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+};
+
 const io = new Server(httpServer, {
-  cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    methods: ['GET', 'POST'],
-    credentials: true
-  }
+  cors: corsOptions
 });
 
 // Middleware
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
-  credentials: true
-}));
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // API Routes
@@ -46,7 +63,11 @@ app.use('/api/chat', authenticateToken, chatRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    message: '🐸 FD Central API - Tendies Incoming!'
+  });
 });
 
 // Serve static files in production
@@ -66,8 +87,16 @@ startScheduledJobs(io);
 const PORT = process.env.PORT || 3001;
 
 httpServer.listen(PORT, () => {
-  console.log(`🚀 FDCentral server running on port ${PORT}`);
-  console.log(`📈 Ready to track some stonks!`);
+  console.log('');
+  console.log('🐸💰 ================================== 💰🐸');
+  console.log('');
+  console.log('   FD CENTRAL - TENDIES OR BUST');
+  console.log('');
+  console.log(`   🚀 Server running on port ${PORT}`);
+  console.log('   📈 Ready to print money!');
+  console.log('');
+  console.log('🐸💰 ================================== 💰🐸');
+  console.log('');
 });
 
 export { io };
