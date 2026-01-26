@@ -165,7 +165,7 @@ export default function Recommendations() {
       case 'hit_stop':
         return <XCircle className="w-5 h-5 text-red-400" />;
       case 'expired':
-        return <Clock className="w-5 h-5 text-gray-400" />;
+        return <Clock className="w-5 h-5 text-surface-400" />;
       default:
         return <Target className="w-5 h-5 text-blue-400" />;
     }
@@ -187,11 +187,11 @@ export default function Recommendations() {
             <Zap className="w-6 h-6 text-yellow-400" />
             AI Recommendations
           </h1>
-          <p className="text-gray-400">Technical analysis powered trade ideas with performance tracking</p>
+          <p className="text-surface-400">Technical analysis powered trade ideas with performance tracking</p>
         </div>
         <button
           onClick={() => setShowGenerateModal(true)}
-          className="px-6 py-3 rounded-lg font-bold text-gray-900 bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 hover:from-yellow-300 hover:via-amber-300 hover:to-yellow-400 transition-all duration-200 shadow-lg shadow-yellow-600/20 flex items-center gap-2"
+          className="px-6 py-3 rounded-lg font-bold text-surface-900 bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 hover:from-yellow-300 hover:via-amber-300 hover:to-yellow-400 transition-all duration-200 shadow-lg shadow-yellow-600/20 flex items-center gap-2"
         >
           <Sparkles className="w-5 h-5" />
           Generate Pick
@@ -205,10 +205,10 @@ export default function Recommendations() {
             <div className="p-2.5 bg-green-900/50 rounded-xl">
               <Trophy className="w-6 h-6 text-yellow-400" />
             </div>
-            <span className="text-gray-400 font-medium">Win Rate</span>
+            <span className="text-surface-400 font-medium">Win Rate</span>
           </div>
           <p className="text-4xl font-black text-green-400">{stats?.winRate || 0}%</p>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-sm text-surface-500 mt-2">
             {stats?.wins || 0} wins / {stats?.losses || 0} losses
           </p>
         </div>
@@ -218,10 +218,10 @@ export default function Recommendations() {
             <div className="p-2.5 bg-blue-900/50 rounded-xl">
               <Target className="w-6 h-6 text-blue-400" />
             </div>
-            <span className="text-gray-400 font-medium">Active Plays</span>
+            <span className="text-surface-400 font-medium">Active Plays</span>
           </div>
           <p className="text-4xl font-black text-blue-400">{stats?.active || 0}</p>
-          <p className="text-sm text-gray-500 mt-2">Currently tracking</p>
+          <p className="text-sm text-surface-500 mt-2">Currently tracking</p>
         </div>
 
         <div className="card p-5 border-purple-600/20">
@@ -229,12 +229,12 @@ export default function Recommendations() {
             <div className="p-2.5 bg-purple-900/50 rounded-xl">
               <TrendingUp className="w-6 h-6 text-purple-400" />
             </div>
-            <span className="text-gray-400 font-medium">Avg Return</span>
+            <span className="text-surface-400 font-medium">Avg Return</span>
           </div>
           <p className={`text-4xl font-black ${getChangeClass(stats?.avg_return || 0)}`}>
             {formatPercent(stats?.avg_return || 0)}
           </p>
-          <p className="text-sm text-gray-500 mt-2">Per recommendation</p>
+          <p className="text-sm text-surface-500 mt-2">Per recommendation</p>
         </div>
 
         <div className="card p-5">
@@ -257,7 +257,7 @@ export default function Recommendations() {
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <p className="text-center text-sm text-gray-400 font-medium">
+          <p className="text-center text-sm text-surface-400 font-medium">
             {stats?.total_recommendations || 0} total picks
           </p>
         </div>
@@ -272,7 +272,7 @@ export default function Recommendations() {
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
               filter === f
                 ? 'bg-gradient-to-r from-yellow-600 to-amber-600 text-white shadow-lg shadow-yellow-600/20'
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
+                : 'bg-surface-800 text-surface-300 hover:bg-surface-700 border border-surface-700'
             }`}
           >
             {f === 'hit_target' ? 'Winners' : f === 'hit_stop' ? 'Losers' : f.replace(/\b\w/g, (l) => l.toUpperCase())}
@@ -287,9 +287,9 @@ export default function Recommendations() {
             .fill(0)
             .map((_, i) => (
               <div key={i} className="card p-6 animate-pulse">
-                <div className="h-6 bg-gray-700 rounded w-24 mb-4"></div>
-                <div className="h-4 bg-gray-700 rounded w-full mb-2"></div>
-                <div className="h-4 bg-gray-700 rounded w-3/4"></div>
+                <div className="h-6 bg-surface-700 rounded w-24 mb-4"></div>
+                <div className="h-4 bg-surface-700 rounded w-full mb-2"></div>
+                <div className="h-4 bg-surface-700 rounded w-3/4"></div>
               </div>
             ))}
         </div>
@@ -312,47 +312,47 @@ export default function Recommendations() {
                 </div>
 
                 <div className="text-right text-sm">
-                  <p className="text-gray-400">{getTimeSince(rec.created_at)}</p>
-                  <p className="text-gray-500">by {rec.created_by_name}</p>
+                  <p className="text-surface-400">{getTimeSince(rec.created_at)}</p>
+                  <p className="text-surface-500">by {rec.created_by_name}</p>
                 </div>
               </div>
 
               {/* Reasoning - show in preformatted style */}
-              <div className="bg-gray-900/50 rounded-lg p-4 mb-4 font-mono text-sm text-gray-300 whitespace-pre-wrap border border-gray-700/50">
+              <div className="bg-surface-900/50 rounded-lg p-4 mb-4 font-mono text-sm text-surface-300 whitespace-pre-wrap border border-surface-700/50">
                 {rec.reasoning}
               </div>
 
               {/* Price levels */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                <div className="bg-gray-800/50 rounded-lg p-3">
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Entry</p>
+                <div className="bg-surface-800/50 rounded-lg p-3">
+                  <p className="text-xs text-surface-500 uppercase tracking-wide mb-1">Entry</p>
                   <p className="text-lg font-bold">{formatCurrency(rec.entry_price)}</p>
                 </div>
-                <div className="bg-gray-800/50 rounded-lg p-3">
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Target</p>
+                <div className="bg-surface-800/50 rounded-lg p-3">
+                  <p className="text-xs text-surface-500 uppercase tracking-wide mb-1">Target</p>
                   <p className="text-lg font-bold text-green-400 flex items-center gap-1">
                     <ArrowUpRight className="w-4 h-4" />
                     {formatCurrency(rec.target_price)}
                   </p>
                 </div>
-                <div className="bg-gray-800/50 rounded-lg p-3">
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Stop Loss</p>
+                <div className="bg-surface-800/50 rounded-lg p-3">
+                  <p className="text-xs text-surface-500 uppercase tracking-wide mb-1">Stop Loss</p>
                   <p className="text-lg font-bold text-red-400 flex items-center gap-1">
                     <ArrowDownRight className="w-4 h-4" />
                     {formatCurrency(rec.stop_loss)}
                   </p>
                 </div>
                 {rec.exit_price ? (
-                  <div className="bg-gray-800/50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Exit</p>
+                  <div className="bg-surface-800/50 rounded-lg p-3">
+                    <p className="text-xs text-surface-500 uppercase tracking-wide mb-1">Exit</p>
                     <p className={`text-lg font-bold ${getChangeClass(rec.profit_loss_percent || 0)}`}>
                       {formatCurrency(rec.exit_price)}
                       <span className="text-sm ml-1">({formatPercent(rec.profit_loss_percent || 0)})</span>
                     </p>
                   </div>
                 ) : (
-                  <div className="bg-gray-800/50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Status</p>
+                  <div className="bg-surface-800/50 rounded-lg p-3">
+                    <p className="text-xs text-surface-500 uppercase tracking-wide mb-1">Status</p>
                     <p className="text-lg font-bold text-blue-400 capitalize">{rec.status}</p>
                   </div>
                 )}
@@ -362,13 +362,13 @@ export default function Recommendations() {
               {rec.option_details && <OptionsPlayCard optionsPlay={rec.option_details} />}
 
               {/* Reactions */}
-              <div className="flex items-center gap-3 pt-4 border-t border-gray-700/50">
+              <div className="flex items-center gap-3 pt-4 border-t border-surface-700/50">
                 <button
                   onClick={() => react(rec.id, 'bullish')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
                     rec.user_reaction === 'bullish'
                       ? 'bg-green-600 text-white'
-                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                      : 'bg-surface-800 text-surface-300 hover:bg-surface-700'
                   }`}
                 >
                   <ThumbsUp className="w-4 h-4" />
@@ -379,7 +379,7 @@ export default function Recommendations() {
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
                     rec.user_reaction === 'bearish'
                       ? 'bg-red-600 text-white'
-                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                      : 'bg-surface-800 text-surface-300 hover:bg-surface-700'
                   }`}
                 >
                   <ThumbsDown className="w-4 h-4" />
@@ -390,7 +390,7 @@ export default function Recommendations() {
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
                     rec.user_reaction === 'following'
                       ? 'bg-yellow-600 text-white'
-                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                      : 'bg-surface-800 text-surface-300 hover:bg-surface-700'
                   }`}
                 >
                   <Bookmark className="w-4 h-4" />
@@ -401,17 +401,17 @@ export default function Recommendations() {
           ))}
         </div>
       ) : (
-        <div className="card p-12 text-center border-dashed border-2 border-gray-700">
-          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-800 flex items-center justify-center">
+        <div className="card p-12 text-center border-dashed border-2 border-surface-700">
+          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-surface-800 flex items-center justify-center">
             <Sparkles className="w-10 h-10 text-yellow-400" />
           </div>
           <h3 className="text-xl font-bold mb-2">No recommendations yet</h3>
-          <p className="text-gray-400 mb-6 max-w-md mx-auto">
+          <p className="text-surface-400 mb-6 max-w-md mx-auto">
             Generate your first AI-powered trade recommendation based on technical analysis
           </p>
           <button
             onClick={() => setShowGenerateModal(true)}
-            className="px-6 py-3 rounded-lg font-bold text-gray-900 bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 hover:from-yellow-300 hover:via-amber-300 hover:to-yellow-400 transition-all duration-200 shadow-lg shadow-yellow-600/20"
+            className="px-6 py-3 rounded-lg font-bold text-surface-900 bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 hover:from-yellow-300 hover:via-amber-300 hover:to-yellow-400 transition-all duration-200 shadow-lg shadow-yellow-600/20"
           >
             Generate Your First Pick
           </button>
@@ -428,10 +428,10 @@ export default function Recommendations() {
               </div>
               <div>
                 <h3 className="text-xl font-bold">Generate AI Recommendation</h3>
-                <p className="text-gray-400 text-sm">Powered by technical analysis</p>
+                <p className="text-surface-400 text-sm">Powered by technical analysis</p>
               </div>
             </div>
-            <p className="text-gray-300 mb-4">
+            <p className="text-surface-300 mb-4">
               Enter a stock symbol to analyze. Our AI will evaluate RSI, MACD, Bollinger Bands, ADX, and more to generate a trade recommendation.
             </p>
             <input
@@ -446,18 +446,18 @@ export default function Recommendations() {
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setShowGenerateModal(false)}
-                className="px-4 py-2 rounded-lg font-medium bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors"
+                className="px-4 py-2 rounded-lg font-medium bg-surface-700 text-surface-300 hover:bg-surface-600 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={generateRecommendation}
                 disabled={generating || !generatingSymbol.trim()}
-                className="px-6 py-2 rounded-lg font-bold text-gray-900 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-6 py-2 rounded-lg font-bold text-surface-900 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {generating ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-surface-900 border-t-transparent rounded-full animate-spin" />
                     Analyzing...
                   </>
                 ) : (
@@ -495,7 +495,7 @@ function OptionsPlayCard({ optionsPlay }: { optionsPlay: OptionsPlay | any }) {
     };
 
     return (
-      <div className={`rounded-xl p-4 mb-4 border ${directionColors[optionsPlay.direction as keyof typeof directionColors] || 'border-gray-600/30'}`}>
+      <div className={`rounded-xl p-4 mb-4 border ${directionColors[optionsPlay.direction as keyof typeof directionColors] || 'border-surface-600/30'}`}>
         <div className="flex items-center gap-3 mb-3">
           {directionIcons[optionsPlay.direction as keyof typeof directionIcons]}
           <h4 className="text-lg font-bold">{optionsPlay.strategy}</h4>
@@ -521,36 +521,36 @@ function OptionsPlayCard({ optionsPlay }: { optionsPlay: OptionsPlay | any }) {
               <span className={`${strike.type === 'call' ? 'text-green-400' : 'text-red-400'}`}>
                 {strike.type.toUpperCase()}
               </span>
-              <span className="text-gray-500">exp: {strike.expiration}</span>
+              <span className="text-surface-500">exp: {strike.expiration}</span>
             </div>
           ))}
         </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-          <div className="bg-gray-800/50 rounded-lg p-2">
-            <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+          <div className="bg-surface-800/50 rounded-lg p-2">
+            <div className="flex items-center gap-1 text-xs text-surface-500 mb-1">
               <DollarSign className="w-3 h-3" />
               Max Profit
             </div>
             <p className="text-sm font-bold text-green-400">{optionsPlay.maxProfit}</p>
           </div>
-          <div className="bg-gray-800/50 rounded-lg p-2">
-            <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+          <div className="bg-surface-800/50 rounded-lg p-2">
+            <div className="flex items-center gap-1 text-xs text-surface-500 mb-1">
               <Shield className="w-3 h-3" />
               Max Loss
             </div>
             <p className="text-sm font-bold text-red-400">{optionsPlay.maxLoss}</p>
           </div>
-          <div className="bg-gray-800/50 rounded-lg p-2">
-            <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+          <div className="bg-surface-800/50 rounded-lg p-2">
+            <div className="flex items-center gap-1 text-xs text-surface-500 mb-1">
               <Target className="w-3 h-3" />
               Breakeven
             </div>
             <p className="text-sm font-bold">${optionsPlay.breakeven?.toFixed(2)}</p>
           </div>
-          <div className="bg-gray-800/50 rounded-lg p-2">
-            <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+          <div className="bg-surface-800/50 rounded-lg p-2">
+            <div className="flex items-center gap-1 text-xs text-surface-500 mb-1">
               <Percent className="w-3 h-3" />
               Probability
             </div>
@@ -562,7 +562,7 @@ function OptionsPlayCard({ optionsPlay }: { optionsPlay: OptionsPlay | any }) {
         {optionsPlay.reasoning && optionsPlay.reasoning.length > 0 && (
           <div className="space-y-1">
             {optionsPlay.reasoning.map((reason: string, i: number) => (
-              <p key={i} className="text-sm text-gray-300">{reason}</p>
+              <p key={i} className="text-sm text-surface-300">{reason}</p>
             ))}
           </div>
         )}
@@ -572,8 +572,8 @@ function OptionsPlayCard({ optionsPlay }: { optionsPlay: OptionsPlay | any }) {
 
   // Legacy format (fallback)
   return (
-    <div className="bg-gray-700/50 rounded-lg p-3 mb-4">
-      <p className="text-sm text-gray-400">Options Play:</p>
+    <div className="bg-surface-700/50 rounded-lg p-3 mb-4">
+      <p className="text-sm text-surface-400">Options Play:</p>
       <p className="font-medium">
         ${optionsPlay.strike} {optionsPlay.type} @ {formatCurrency(optionsPlay.premium || 0)}
         {optionsPlay.impliedVolatility && ` (IV: ${(optionsPlay.impliedVolatility * 100).toFixed(1)}%)`}

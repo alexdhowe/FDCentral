@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { Mail, Lock, TrendingUp, Flame, DollarSign, BarChart2, Users, Bell } from 'lucide-react';
+import { Mail, Lock, ArrowRight, TrendingUp, BarChart3, Shield, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Login() {
@@ -17,7 +17,7 @@ export default function Login() {
 
     try {
       await login(email, password);
-      toast.success('Welcome back! Time to print tendies!');
+      toast.success('Welcome back!');
       navigate('/');
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Login failed');
@@ -28,223 +28,198 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left side - branding */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-12 flex-col justify-between">
-        {/* Animated gold sparkles background */}
-        <div className="absolute inset-0 overflow-hidden">
-          {[...Array(30)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 bg-yellow-400 rounded-full animate-pulse"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 2}s`,
-                opacity: 0.5,
-              }}
-            />
-          ))}
+      {/* Left Panel - Branding */}
+      <div className="hidden lg:flex lg:w-[55%] relative overflow-hidden bg-surface-950">
+        {/* Background gradient */}
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-gradient-to-br from-accent-500/5 via-transparent to-accent-600/5" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-accent-500/10 rounded-full blur-[120px]" />
+          <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-accent-600/5 rounded-full blur-[80px]" />
         </div>
 
-        {/* Top gradient line */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-yellow-600 via-amber-400 to-yellow-600" />
+        {/* Grid pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.02]"
+          style={{
+            backgroundImage: `linear-gradient(rgba(251, 191, 36, 0.3) 1px, transparent 1px),
+                             linear-gradient(90deg, rgba(251, 191, 36, 0.3) 1px, transparent 1px)`,
+            backgroundSize: '60px 60px',
+          }}
+        />
 
-        <div className="relative z-10">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="flex gap-1 items-end">
-              <GoldBar size="sm" />
-              <GoldBar size="md" />
-              <GoldBar size="lg" />
-            </div>
-            <PepeFrog className="w-16 h-16" />
-          </div>
-          <h1 className="text-4xl font-black tracking-tight">
-            <span className="bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 bg-clip-text text-transparent">
-              FD
-            </span>
-            <span className="bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-400 bg-clip-text text-transparent">
-              {' '}Central
-            </span>
-          </h1>
-          <p className="text-yellow-400/80 font-medium tracking-widest text-sm mt-2">
-            TENDIES OR BUST
-          </p>
-        </div>
-
-        <div className="relative z-10 space-y-8">
+        <div className="relative z-10 flex flex-col justify-between p-12 w-full">
+          {/* Logo */}
           <div>
-            <h2 className="text-2xl font-bold text-white mb-6">
-              Your Ultimate Trading Command Center
-            </h2>
-            <div className="space-y-4">
-              <FeatureItem icon={BarChart2} text="Real-time stock & options data" />
-              <FeatureItem icon={TrendingUp} text="AI-powered trade recommendations" />
-              <FeatureItem icon={Users} text="Shared watchlists with friends" />
-              <FeatureItem icon={Flame} text="Advanced charting & technical analysis" />
-              <FeatureItem icon={Bell} text="Smart price alerts" />
-              <FeatureItem icon={DollarSign} text="Performance tracking & P&L" />
-            </div>
-          </div>
-        </div>
-
-        <div className="relative z-10 flex items-center justify-between">
-          <p className="text-yellow-300/60 text-sm">
-            Track performance. Share insights. Print tendies.
-          </p>
-          <div className="flex gap-1 items-end">
-            <GoldBar size="lg" />
-            <GoldBar size="md" />
-            <GoldBar size="sm" />
-          </div>
-        </div>
-
-        {/* Bottom gradient line */}
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-yellow-600 via-amber-400 to-yellow-600" />
-      </div>
-
-      {/* Right side - login form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-gray-900">
-        <div className="w-full max-w-md">
-          {/* Mobile branding */}
-          <div className="lg:hidden flex flex-col items-center mb-8">
-            <div className="flex items-center gap-3 mb-2">
-              <PepeFrog className="w-12 h-12" />
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent-400 to-accent-600 flex items-center justify-center shadow-lg shadow-accent-500/20">
+                <TrendingUp className="w-6 h-6 text-surface-950" />
+              </div>
               <div>
-                <h1 className="text-2xl font-black">
-                  <span className="bg-gradient-to-r from-yellow-300 to-yellow-500 bg-clip-text text-transparent">
-                    FD
-                  </span>
-                  <span className="bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
-                    {' '}Central
-                  </span>
+                <h1 className="text-2xl font-bold tracking-tight">
+                  <span className="text-gradient">FD Central</span>
                 </h1>
+                <p className="text-xs text-surface-500 font-medium tracking-widest uppercase">Trading Intelligence</p>
               </div>
             </div>
-            <p className="text-yellow-400/70 text-xs tracking-widest">TENDIES OR BUST</p>
           </div>
 
-          <div className="card p-8 border-yellow-600/20">
-            <h2 className="text-2xl font-bold mb-2">Welcome back</h2>
-            <p className="text-gray-400 mb-6">Sign in to continue to your dashboard</p>
+          {/* Main content */}
+          <div className="max-w-lg">
+            <h2 className="text-4xl font-bold text-surface-100 leading-tight mb-6">
+              Your competitive edge in the
+              <span className="text-gradient"> markets</span>
+            </h2>
+            <p className="text-lg text-surface-400 mb-10 leading-relaxed">
+              AI-powered technical analysis, real-time alerts, and intelligent trade recommendations
+              designed to help you make better decisions.
+            </p>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label className="label">Email</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="input pl-10"
-                    placeholder="you@example.com"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="label">Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="input pl-10"
-                    placeholder="Enter your password"
-                    required
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 rounded-lg font-bold text-gray-900 bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 hover:from-yellow-300 hover:via-amber-300 hover:to-yellow-400 transition-all duration-200 shadow-lg shadow-yellow-600/20 disabled:opacity-50"
-              >
-                {loading ? 'Signing in...' : 'Sign In'}
-              </button>
-            </form>
-
-            <div className="mt-6 pt-6 border-t border-gray-700 text-center">
-              <p className="text-gray-400">
-                New here?{' '}
-                <Link to="/register" className="text-yellow-400 hover:text-yellow-300 font-medium">
-                  Create an account
-                </Link>
-              </p>
+            {/* Features */}
+            <div className="grid grid-cols-2 gap-4">
+              <FeatureCard
+                icon={BarChart3}
+                title="Technical Analysis"
+                description="RSI, MACD, Bollinger Bands & more"
+              />
+              <FeatureCard
+                icon={Zap}
+                title="AI Recommendations"
+                description="Data-driven trade signals"
+              />
+              <FeatureCard
+                icon={TrendingUp}
+                title="Real-Time Data"
+                description="Live quotes & market updates"
+              />
+              <FeatureCard
+                icon={Shield}
+                title="Risk Management"
+                description="Smart stop-loss & targets"
+              />
             </div>
           </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between">
+            <p className="text-surface-600 text-sm">
+              Trusted by traders worldwide
+            </p>
+            <div className="flex items-center gap-4">
+              <div className="flex -space-x-2">
+                {[...Array(4)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="w-8 h-8 rounded-full bg-surface-800 border-2 border-surface-950 flex items-center justify-center text-xs font-bold text-surface-400"
+                  >
+                    {['JD', 'MK', 'AS', 'RW'][i]}
+                  </div>
+                ))}
+              </div>
+              <span className="text-sm text-surface-500">+2.4k active users</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Panel - Login Form */}
+      <div className="flex-1 flex items-center justify-center p-8 bg-surface-900">
+        <div className="w-full max-w-md">
+          {/* Mobile Logo */}
+          <div className="lg:hidden flex items-center justify-center gap-3 mb-10">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent-400 to-accent-600 flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 text-surface-950" />
+            </div>
+            <span className="text-xl font-bold text-gradient">FD Central</span>
+          </div>
+
+          <div className="text-center lg:text-left mb-8">
+            <h2 className="text-2xl font-bold text-surface-100 mb-2">Welcome back</h2>
+            <p className="text-surface-400">Enter your credentials to access your account</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="label">Email address</label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-surface-500" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="input pl-12"
+                  placeholder="you@example.com"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="label">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-surface-500" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="input pl-12"
+                  placeholder="Enter your password"
+                  required
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full py-3.5 text-base group"
+            >
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 border-2 border-surface-950/30 border-t-surface-950 rounded-full animate-spin" />
+                  Signing in...
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  Sign in
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              )}
+            </button>
+          </form>
+
+          <div className="divider my-8" />
+
+          <p className="text-center text-surface-400">
+            Don't have an account?{' '}
+            <Link
+              to="/register"
+              className="text-accent-400 hover:text-accent-300 font-semibold transition-colors"
+            >
+              Create one free
+            </Link>
+          </p>
         </div>
       </div>
     </div>
   );
 }
 
-function FeatureItem({ icon: Icon, text }: { icon: any; text: string }) {
+function FeatureCard({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: any;
+  title: string;
+  description: string;
+}) {
   return (
-    <div className="flex items-center gap-3">
-      <div className="w-8 h-8 rounded-lg bg-yellow-600/20 flex items-center justify-center">
-        <Icon className="w-4 h-4 text-yellow-400" />
+    <div className="p-4 rounded-xl bg-surface-900/50 border border-surface-800/50 backdrop-blur-sm">
+      <div className="w-10 h-10 rounded-lg bg-accent-500/10 flex items-center justify-center mb-3">
+        <Icon className="w-5 h-5 text-accent-400" />
       </div>
-      <span className="text-gray-300">{text}</span>
+      <h3 className="font-semibold text-surface-200 mb-1">{title}</h3>
+      <p className="text-sm text-surface-500">{description}</p>
     </div>
-  );
-}
-
-function GoldBar({ size }: { size: 'sm' | 'md' | 'lg' }) {
-  const heights = { sm: 'h-6', md: 'h-10', lg: 'h-14' };
-  const widths = { sm: 'w-4', md: 'w-5', lg: 'w-6' };
-
-  return (
-    <div
-      className={`${heights[size]} ${widths[size]} rounded-sm relative overflow-hidden`}
-      style={{
-        background: 'linear-gradient(135deg, #ffd700 0%, #ffed4a 25%, #f59e0b 50%, #ffd700 75%, #b8860b 100%)',
-        boxShadow: '0 0 10px rgba(255, 215, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.4)',
-      }}
-    >
-      <div
-        className="absolute inset-0 opacity-60"
-        style={{
-          background: 'linear-gradient(135deg, transparent 30%, rgba(255,255,255,0.8) 50%, transparent 70%)',
-        }}
-      />
-      <div className="absolute inset-0 flex flex-col justify-evenly px-0.5">
-        <div className="h-px bg-amber-700/30" />
-        <div className="h-px bg-amber-700/30" />
-        <div className="h-px bg-amber-700/30" />
-      </div>
-    </div>
-  );
-}
-
-function PepeFrog({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 100 100" className={className}>
-      <ellipse cx="50" cy="55" rx="40" ry="35" fill="#6b8e23" />
-      <ellipse cx="50" cy="55" rx="38" ry="33" fill="#7cb342" />
-      <ellipse cx="32" cy="40" rx="16" ry="18" fill="white" />
-      <ellipse cx="68" cy="40" rx="16" ry="18" fill="white" />
-      <ellipse cx="35" cy="42" rx="8" ry="10" fill="#2d2d2d" />
-      <ellipse cx="65" cy="42" rx="8" ry="10" fill="#2d2d2d" />
-      <circle cx="38" cy="38" r="3" fill="white" />
-      <circle cx="68" cy="38" r="3" fill="white" />
-      <path d="M20 28 Q32 22 44 30" stroke="#4a5d23" strokeWidth="3" fill="none" strokeLinecap="round" />
-      <path d="M56 30 Q68 22 80 28" stroke="#4a5d23" strokeWidth="3" fill="none" strokeLinecap="round" />
-      <path d="M25 68 Q50 85 75 68" stroke="#4a5d23" strokeWidth="3" fill="none" strokeLinecap="round" />
-      <path d="M30 62 Q50 70 70 62" stroke="#4a5d23" strokeWidth="2" fill="none" strokeLinecap="round" />
-      <ellipse cx="22" cy="58" rx="8" ry="5" fill="#ff9999" opacity="0.4" />
-      <ellipse cx="78" cy="58" rx="8" ry="5" fill="#ff9999" opacity="0.4" />
-      <path d="M25 20 L30 5 L40 15 L50 0 L60 15 L70 5 L75 20 Z" fill="url(#goldGradientLogin)" />
-      <defs>
-        <linearGradient id="goldGradientLogin" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#ffd700" />
-          <stop offset="50%" stopColor="#ffed4a" />
-          <stop offset="100%" stopColor="#b8860b" />
-        </linearGradient>
-      </defs>
-    </svg>
   );
 }
