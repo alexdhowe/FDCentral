@@ -13,7 +13,7 @@ services:
     name: fdcentral-api
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build:server
+    buildCommand: npm install && npm run build:server && npm run db:migrate --workspace=server
     startCommand: npm run start
     healthCheckPath: /api/health
     envVars:
