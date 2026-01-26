@@ -1,8 +1,8 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-import yahooFinanceModule from 'yahoo-finance2';
+import YahooFinance from 'yahoo-finance2';
 
-// yahoo-finance2 v2.x has incomplete type definitions - cast to any for runtime methods
-const yahooFinance = yahooFinanceModule as any;
+// yahoo-finance2 v2.x exports a class that needs to be instantiated
+const yahooFinance = new (YahooFinance as any)();
 
 export interface Quote {
   symbol: string;
