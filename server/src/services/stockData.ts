@@ -1,8 +1,15 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 import YahooFinance from 'yahoo-finance2';
 
-// yahoo-finance2 v2.x exports a class that needs to be instantiated
+// Create instance and log available methods for debugging
 const yahooFinance = new (YahooFinance as any)();
+
+// Log what methods are actually available
+console.log('Yahoo Finance available methods:', Object.keys(yahooFinance).filter(k => typeof yahooFinance[k] === 'function'));
+
+// Also try accessing the prototype methods
+const protoMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(yahooFinance)).filter(m => m !== 'constructor');
+console.log('Yahoo Finance prototype methods:', protoMethods);
 
 // Simple in-memory cache to reduce API calls and avoid rate limits
 const quoteCache = new Map<string, { data: any; timestamp: number }>();
