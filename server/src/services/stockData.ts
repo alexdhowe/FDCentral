@@ -4,6 +4,25 @@ import YahooFinance from 'yahoo-finance2';
 // yahoo-finance2 v2.x exports a class that needs to be instantiated
 const yahooFinance = new (YahooFinance as any)();
 
+// Simple in-memory cache to reduce API calls and avoid rate limits
+const quoteCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 60000; // 1 minute cache
+
+function getCachedQuote(symbol: string): any | null {
+  const cached = quoteCache.get(symbol);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+  return null;
+}
+
+function setCachedQuote(symbol: string, data: any): void {
+  quoteCache.set(symbol, { data, timestamp: Date.now() });
+}
+
+// Rate limit helper - wait between requests
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export interface Quote {
   symbol: string;
   price: number;
@@ -50,11 +69,17 @@ export interface OptionContract {
 
 export async function getQuote(symbol: string): Promise<Quote | null> {
   try {
+    // Check cache first
+    const cached = getCachedQuote(symbol);
+    if (cached) {
+      return cached;
+    }
+
     const quote = await yahooFinance.quote(symbol);
 
     if (!quote) return null;
 
-    return {
+    const result = {
       symbol: quote.symbol,
       price: quote.regularMarketPrice || 0,
       change: quote.regularMarketChange || 0,
@@ -67,9 +92,24 @@ export async function getQuote(symbol: string): Promise<Quote | null> {
       previousClose: quote.regularMarketPreviousClose || 0,
       timestamp: new Date()
     };
-  } catch (error) {
-    console.error(`Error fetching quote for ${symbol}:`, error);
-    return null;
+
+    setCachedQuote(symbol, result);
+    return result;
+  } catch (error: any) {
+    console.error(`Error fetching quote for ${symbol}:`, error?.message || error);
+    // Return mock data on error to keep app functional
+    return {
+      symbol: symbol,
+      price: 0,
+      change: 0,
+      changePercent: 0,
+      volume: 0,
+      high: 0,
+      low: 0,
+      open: 0,
+      previousClose: 0,
+      timestamp: new Date()
+    };
   }
 }
 
@@ -168,6 +208,19 @@ export async function getHistoricalData(
 
 export async function getOptionChain(symbol: string, expirationDate?: Date): Promise<OptionChain | null> {
   try {
+    // Check if options method exists (not available in all yahoo-finance2 builds)
+    if (typeof yahooFinance.options !== 'function') {
+      console.log('Options API not available, returning placeholder data');
+      // Return placeholder structure
+      const expDate = new Date();
+      expDate.setDate(expDate.getDate() + 30);
+      return {
+        expirationDates: [expDate],
+        calls: [],
+        puts: []
+      };
+    }
+
     const options = await yahooFinance.options(symbol, {
       date: expirationDate
     });
@@ -209,9 +262,14 @@ export async function getOptionChain(symbol: string, expirationDate?: Date): Pro
       calls,
       puts
     };
-  } catch (error) {
-    console.error(`Error fetching options for ${symbol}:`, error);
-    return null;
+  } catch (error: any) {
+    console.error(`Error fetching options for ${symbol}:`, error?.message || error);
+    // Return empty structure on error
+    return {
+      expirationDates: [],
+      calls: [],
+      puts: []
+    };
   }
 }
 
