@@ -623,3 +623,216 @@ export function calculateTarget(
   const risk = Math.abs(entryPrice - stopLoss);
   return entryPrice + (risk * rrRatio);
 }
+
+/**
+ * Options Play Recommendation Interface
+ */
+export interface OptionsPlay {
+  strategy: string;
+  direction: 'bullish' | 'bearish' | 'neutral';
+  strikes: {
+    type: 'call' | 'put';
+    action: 'buy' | 'sell';
+    strikePrice: number;
+    expiration: string;
+  }[];
+  maxProfit: string;
+  maxLoss: string;
+  breakeven: number;
+  probability: number;
+  riskReward: string;
+  reasoning: string[];
+  confidence: number;
+}
+
+/**
+ * Generate intelligent options play recommendations based on TA
+ * This creates smart options suggestions without needing live chain data
+ */
+export function generateOptionsRecommendation(
+  symbol: string,
+  currentPrice: number,
+  indicators: TechnicalIndicators,
+  signalScore: SignalScore
+): OptionsPlay | null {
+  const { score, confidence, signals } = signalScore;
+
+  // Only recommend if we have decent confidence
+  if (confidence < 55) {
+    return null;
+  }
+
+  // Round strike prices to nearest $5 for stocks > $50, $2.50 for < $50, $1 for < $20
+  const roundStrike = (price: number): number => {
+    if (currentPrice > 100) return Math.round(price / 5) * 5;
+    if (currentPrice > 50) return Math.round(price / 2.5) * 2.5;
+    if (currentPrice > 20) return Math.round(price / 2.5) * 2.5;
+    return Math.round(price);
+  };
+
+  // Calculate key levels
+  const atr = indicators.atr;
+  const resistance = indicators.resistance1;
+  const support = indicators.support1;
+
+  // Determine expiration based on signal strength and volatility
+  const getExpiration = (): string => {
+    if (indicators.atrPercent > 3) {
+      // High volatility - shorter expiration
+      return '1-2 weeks';
+    } else if (score > 60 || score < -60) {
+      // Strong signal - can go shorter
+      return '2-3 weeks';
+    } else {
+      // Give it time
+      return '3-4 weeks';
+    }
+  };
+
+  const expiration = getExpiration();
+  const reasoning: string[] = [];
+
+  // STRONGLY BULLISH (score > 50)
+  if (score > 50 && confidence > 65) {
+    const strikePrice = roundStrike(currentPrice * 1.02); // Slightly OTM call
+    const targetPrice = roundStrike(resistance);
+
+    signals.filter(s => s.signal === 'bullish').slice(0, 3).forEach(s => {
+      reasoning.push(`✅ ${s.indicator}: ${s.description}`);
+    });
+    reasoning.push(`🎯 Target: $${targetPrice.toFixed(2)} (R1 resistance)`);
+    reasoning.push(`📊 Trend strength: ${indicators.trendStrength}`);
+
+    return {
+      strategy: 'Long Call',
+      direction: 'bullish',
+      strikes: [{
+        type: 'call',
+        action: 'buy',
+        strikePrice,
+        expiration
+      }],
+      maxProfit: 'Unlimited',
+      maxLoss: 'Premium paid',
+      breakeven: strikePrice + (currentPrice * 0.03), // Estimate 3% premium
+      probability: Math.min(70, 45 + (score / 4)),
+      riskReward: '1:3+',
+      reasoning,
+      confidence
+    };
+  }
+
+  // STRONGLY BEARISH (score < -50)
+  if (score < -50 && confidence > 65) {
+    const strikePrice = roundStrike(currentPrice * 0.98); // Slightly OTM put
+    const targetPrice = roundStrike(support);
+
+    signals.filter(s => s.signal === 'bearish').slice(0, 3).forEach(s => {
+      reasoning.push(`🔻 ${s.indicator}: ${s.description}`);
+    });
+    reasoning.push(`🎯 Target: $${targetPrice.toFixed(2)} (S1 support)`);
+    reasoning.push(`📊 Trend strength: ${indicators.trendStrength}`);
+
+    return {
+      strategy: 'Long Put',
+      direction: 'bearish',
+      strikes: [{
+        type: 'put',
+        action: 'buy',
+        strikePrice,
+        expiration
+      }],
+      maxProfit: `$${(strikePrice - 0).toFixed(2)} (if stock goes to $0)`,
+      maxLoss: 'Premium paid',
+      breakeven: strikePrice - (currentPrice * 0.03),
+      probability: Math.min(70, 45 + (Math.abs(score) / 4)),
+      riskReward: '1:3+',
+      reasoning,
+      confidence
+    };
+  }
+
+  // MODERATELY BULLISH (score 25-50) - Bull Call Spread for lower risk
+  if (score >= 25 && score <= 50) {
+    const longStrike = roundStrike(currentPrice);
+    const shortStrike = roundStrike(currentPrice * 1.05);
+
+    signals.filter(s => s.signal === 'bullish').slice(0, 2).forEach(s => {
+      reasoning.push(`✅ ${s.indicator}: ${s.description}`);
+    });
+    reasoning.push(`📈 Moderate bullish bias - using spread for defined risk`);
+    reasoning.push(`🎯 Profit zone: $${longStrike} to $${shortStrike}`);
+
+    return {
+      strategy: 'Bull Call Spread',
+      direction: 'bullish',
+      strikes: [
+        { type: 'call', action: 'buy', strikePrice: longStrike, expiration },
+        { type: 'call', action: 'sell', strikePrice: shortStrike, expiration }
+      ],
+      maxProfit: `$${((shortStrike - longStrike) * 100 * 0.7).toFixed(0)} per contract`,
+      maxLoss: 'Net debit paid (~30% of spread width)',
+      breakeven: longStrike + ((shortStrike - longStrike) * 0.3),
+      probability: Math.min(65, 50 + (score / 5)),
+      riskReward: '1:2',
+      reasoning,
+      confidence
+    };
+  }
+
+  // MODERATELY BEARISH (score -50 to -25) - Bear Put Spread
+  if (score <= -25 && score >= -50) {
+    const longStrike = roundStrike(currentPrice);
+    const shortStrike = roundStrike(currentPrice * 0.95);
+
+    signals.filter(s => s.signal === 'bearish').slice(0, 2).forEach(s => {
+      reasoning.push(`🔻 ${s.indicator}: ${s.description}`);
+    });
+    reasoning.push(`📉 Moderate bearish bias - using spread for defined risk`);
+    reasoning.push(`🎯 Profit zone: $${shortStrike} to $${longStrike}`);
+
+    return {
+      strategy: 'Bear Put Spread',
+      direction: 'bearish',
+      strikes: [
+        { type: 'put', action: 'buy', strikePrice: longStrike, expiration },
+        { type: 'put', action: 'sell', strikePrice: shortStrike, expiration }
+      ],
+      maxProfit: `$${((longStrike - shortStrike) * 100 * 0.7).toFixed(0)} per contract`,
+      maxLoss: 'Net debit paid (~30% of spread width)',
+      breakeven: longStrike - ((longStrike - shortStrike) * 0.3),
+      probability: Math.min(65, 50 + (Math.abs(score) / 5)),
+      riskReward: '1:2',
+      reasoning,
+      confidence
+    };
+  }
+
+  // NEUTRAL with high volatility expectation - Straddle/Strangle
+  if (Math.abs(score) < 25 && indicators.bollingerWidth < 0.08) {
+    const atmStrike = roundStrike(currentPrice);
+
+    reasoning.push(`⚡ Bollinger Band SQUEEZE detected - breakout imminent`);
+    reasoning.push(`📊 Low volatility = cheap options premiums`);
+    reasoning.push(`🎲 Direction uncertain, but big move expected`);
+
+    return {
+      strategy: 'Long Straddle',
+      direction: 'neutral',
+      strikes: [
+        { type: 'call', action: 'buy', strikePrice: atmStrike, expiration: '2-3 weeks' },
+        { type: 'put', action: 'buy', strikePrice: atmStrike, expiration: '2-3 weeks' }
+      ],
+      maxProfit: 'Unlimited (if big move either direction)',
+      maxLoss: 'Total premium paid (both options)',
+      breakeven: atmStrike, // Actually two breakevens above and below
+      probability: 55,
+      riskReward: '1:2+',
+      reasoning,
+      confidence: 60
+    };
+  }
+
+  // No strong signal - no recommendation
+  return null;
+}

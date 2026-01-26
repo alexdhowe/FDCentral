@@ -1,15 +1,17 @@
 import { Router, Response } from 'express';
 import { query } from '../db/index.js';
 import { AuthRequest } from '../middleware/auth.js';
-import { getQuote, getHistoricalData, getOptionChain } from '../services/stockData.js';
+import { getQuote, getHistoricalData } from '../services/stockData.js';
 import {
   calculateIndicators,
   generateSignals,
   calculateStopLoss,
   calculateTarget,
+  generateOptionsRecommendation,
   TechnicalIndicators,
   SignalScore,
-  HistoricalBar
+  HistoricalBar,
+  OptionsPlay
 } from '../services/technicalAnalysis.js';
 
 const router = Router();
@@ -229,85 +231,20 @@ router.post('/generate/:symbol', async (req: AuthRequest, res: Response) => {
       `🎯 Confidence: ${signalScore.confidence}%`
     ].join('\n');
 
-    // Check for options play
-    let optionsRecommendation = null;
-    let optionsAnalysis = null;
-
+    // Generate TA-based options play recommendation
+    let optionsPlay: OptionsPlay | null = null;
     try {
-      const chain = await getOptionChain(upperSymbol);
-      if (chain && chain.expirationDates.length > 0) {
-        // Find options 30-45 days out (optimal theta decay)
-        const targetExpiry = new Date();
-        targetExpiry.setDate(targetExpiry.getDate() + 35);
-
-        const calls = chain.calls.filter(c => c.volume > 50 && c.openInterest > 100);
-        const puts = chain.puts.filter(p => p.volume > 50 && p.openInterest > 100);
-
-        if (recommendation === 'buy' && calls.length > 0) {
-          // Find slightly OTM call for leverage
-          const otmCalls = calls
-            .filter(c => c.strike >= quote.price && c.strike <= quote.price * 1.05)
-            .sort((a, b) => b.volume - a.volume);
-
-          if (otmCalls.length > 0) {
-            const bestCall = otmCalls[0];
-
-            // Calculate expected return
-            const intrinsicAtTarget = Math.max(0, targetPrice - bestCall.strike);
-            const expectedReturn = ((intrinsicAtTarget - bestCall.lastPrice) / bestCall.lastPrice * 100);
-
-            optionsRecommendation = {
-              type: 'call',
-              strike: bestCall.strike,
-              expiration: bestCall.expiration,
-              premium: bestCall.lastPrice,
-              impliedVolatility: bestCall.impliedVolatility,
-              delta: 0.5, // Approximate
-              breakeven: bestCall.strike + bestCall.lastPrice,
-              expectedReturn: expectedReturn.toFixed(1) + '%',
-              maxLoss: bestCall.lastPrice * 100
-            };
-
-            optionsAnalysis = {
-              unusualActivity: bestCall.volume > bestCall.openInterest * 0.5,
-              ivPercentile: 'N/A', // Would need historical IV
-              recommendation: expectedReturn > 100 ? 'STRONG BUY' : expectedReturn > 50 ? 'BUY' : 'SPECULATIVE'
-            };
-          }
-        } else if (recommendation === 'sell' && puts.length > 0) {
-          // Find slightly OTM put
-          const otmPuts = puts
-            .filter(p => p.strike <= quote.price && p.strike >= quote.price * 0.95)
-            .sort((a, b) => b.volume - a.volume);
-
-          if (otmPuts.length > 0) {
-            const bestPut = otmPuts[0];
-
-            const intrinsicAtTarget = Math.max(0, bestPut.strike - targetPrice);
-            const expectedReturn = ((intrinsicAtTarget - bestPut.lastPrice) / bestPut.lastPrice * 100);
-
-            optionsRecommendation = {
-              type: 'put',
-              strike: bestPut.strike,
-              expiration: bestPut.expiration,
-              premium: bestPut.lastPrice,
-              impliedVolatility: bestPut.impliedVolatility,
-              delta: -0.5,
-              breakeven: bestPut.strike - bestPut.lastPrice,
-              expectedReturn: expectedReturn.toFixed(1) + '%',
-              maxLoss: bestPut.lastPrice * 100
-            };
-
-            optionsAnalysis = {
-              unusualActivity: bestPut.volume > bestPut.openInterest * 0.5,
-              ivPercentile: 'N/A',
-              recommendation: expectedReturn > 100 ? 'STRONG BUY' : expectedReturn > 50 ? 'BUY' : 'SPECULATIVE'
-            };
-          }
-        }
+      optionsPlay = generateOptionsRecommendation(
+        upperSymbol,
+        quote.price,
+        indicators,
+        signalScore
+      );
+      if (optionsPlay) {
+        console.log(`📈 Generated ${optionsPlay.strategy} options play for ${upperSymbol}`);
       }
     } catch (e) {
-      console.log('Options data not available for', upperSymbol);
+      console.log('Options recommendation generation failed:', e);
     }
 
     // Save recommendation to database
@@ -318,11 +255,11 @@ router.post('/generate/:symbol', async (req: AuthRequest, res: Response) => {
        RETURNING *`,
       [
         upperSymbol,
-        optionsRecommendation ? `options_${optionsRecommendation.type}` : recommendation,
+        optionsPlay ? `options_${optionsPlay.strategy.toLowerCase().replace(/\s+/g, '_')}` : recommendation,
         quote.price,
         targetPrice,
         stopLoss,
-        optionsRecommendation ? JSON.stringify(optionsRecommendation) : null,
+        optionsPlay ? JSON.stringify(optionsPlay) : null,
         reasoning,
         signalScore.confidence,
         req.user!.id
@@ -372,10 +309,7 @@ router.post('/generate/:symbol', async (req: AuthRequest, res: Response) => {
           rewardPercent: rewardPercent.toFixed(2) + '%',
           ratio: `1:${rrRatio}`
         },
-        options: optionsRecommendation ? {
-          ...optionsRecommendation,
-          analysis: optionsAnalysis
-        } : null
+        optionsPlay: optionsPlay
       }
     });
 
