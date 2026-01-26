@@ -36,7 +36,7 @@ services:
     staticPublishPath: client/dist
     envVars:
       - key: VITE_API_URL
-        value: https://fdcentral-api.onrender.com
+        value: https://fdcentral-api-1q03.onrender.com
     routes:
       - type: rewrite
         source: /*
