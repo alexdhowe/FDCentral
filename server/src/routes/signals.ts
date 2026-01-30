@@ -3,7 +3,7 @@
  * Provides access to bot-generated signals, analysis, and notifications
  */
 
-import { Router, Response } from 'express';
+import { Router, Request, Response } from 'express';
 import { query } from '../db/index.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import {
