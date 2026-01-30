@@ -15,6 +15,7 @@ import {
   Zap,
   ChevronRight,
   Settings,
+  Bot,
 } from 'lucide-react';
 import { useState } from 'react';
 import Header from './Header';
@@ -22,6 +23,7 @@ import Header from './Header';
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', description: 'Overview & stats' },
   { to: '/watchlist', icon: List, label: 'Watchlists', description: 'Track symbols' },
+  { to: '/signals', icon: Bot, label: 'Signals', description: 'AI market intelligence' },
   { to: '/options', icon: LineChart, label: 'Options', description: 'Options analysis' },
   { to: '/recommendations', icon: Zap, label: 'AI Picks', description: 'Trade signals' },
   { to: '/alerts', icon: Bell, label: 'Alerts', description: 'Price notifications' },

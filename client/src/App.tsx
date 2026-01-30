@@ -12,6 +12,7 @@ import Options from './pages/Options';
 import Recommendations from './pages/Recommendations';
 import Alerts from './pages/Alerts';
 import Chat from './pages/Chat';
+import Signals from './pages/Signals';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -64,6 +65,7 @@ function App() {
         <Route path="recommendations" element={<Recommendations />} />
         <Route path="alerts" element={<Alerts />} />
         <Route path="chat" element={<Chat />} />
+        <Route path="signals" element={<Signals />} />
       </Route>
     </Routes>
   );

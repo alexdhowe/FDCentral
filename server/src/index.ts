@@ -17,9 +17,11 @@ import { optionsRouter } from './routes/options.js';
 import { recommendationsRouter } from './routes/recommendations.js';
 import { alertsRouter } from './routes/alerts.js';
 import { chatRouter } from './routes/chat.js';
+import signalsRouter from './routes/signals.js';
 import { setupSocketHandlers } from './socket/index.js';
 import { startScheduledJobs } from './jobs/index.js';
 import { authenticateToken } from './middleware/auth.js';
+import { initializeSignalBot } from './services/signalBot.js';
 
 dotenv.config();
 
@@ -65,6 +67,7 @@ app.use('/api/options', authenticateToken, optionsRouter);
 app.use('/api/recommendations', authenticateToken, recommendationsRouter);
 app.use('/api/alerts', authenticateToken, alertsRouter);
 app.use('/api/chat', authenticateToken, chatRouter);
+app.use('/api/signals', authenticateToken, signalsRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -88,6 +91,9 @@ setupSocketHandlers(io);
 
 // Start scheduled jobs (price alerts, recommendation tracking)
 startScheduledJobs(io);
+
+// Initialize the Signal Bot (autonomous market analysis)
+initializeSignalBot();
 
 const PORT = process.env.PORT || 3001;
 
