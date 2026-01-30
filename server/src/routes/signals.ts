@@ -3,9 +3,9 @@
  * Provides access to bot-generated signals, analysis, and notifications
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { query } from '../db/index.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import {
   getBotStatus,
   getRecentSignals,
@@ -56,7 +56,7 @@ router.get('/', async (req: Request, res: Response) => {
 /**
  * GET /signals/feed - Get personalized signal feed based on user's watchlists
  */
-router.get('/feed', async (req: Request, res: Response) => {
+router.get('/feed', async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
     const { limit = '30' } = req.query;
@@ -205,7 +205,7 @@ router.get('/stats', async (req: Request, res: Response) => {
 /**
  * GET /signals/notifications - Get user notifications
  */
-router.get('/notifications', async (req: Request, res: Response) => {
+router.get('/notifications', async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
     const { unread } = req.query;
@@ -231,7 +231,7 @@ router.get('/notifications', async (req: Request, res: Response) => {
 /**
  * POST /signals/notifications/:id/read - Mark notification as read
  */
-router.post('/notifications/:id/read', async (req: Request, res: Response) => {
+router.post('/notifications/:id/read', async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
     const { id } = req.params;
@@ -248,7 +248,7 @@ router.post('/notifications/:id/read', async (req: Request, res: Response) => {
 /**
  * POST /signals/notifications/read-all - Mark all notifications as read
  */
-router.post('/notifications/read-all', async (req: Request, res: Response) => {
+router.post('/notifications/read-all', async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
 
@@ -282,7 +282,7 @@ router.get('/tracked', async (req: Request, res: Response) => {
 /**
  * POST /signals/tracked - Add a symbol to tracking
  */
-router.post('/tracked', async (req: Request, res: Response) => {
+router.post('/tracked', async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
     const { symbol, name } = req.body;

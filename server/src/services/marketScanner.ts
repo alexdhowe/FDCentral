@@ -64,7 +64,7 @@ export async function scanSymbol(symbol: string): Promise<ScanResult | null> {
   try {
     const [quote, historical] = await Promise.all([
       getQuote(symbol),
-      getHistoricalData(symbol, '3m'),
+      getHistoricalData(symbol, '3mo'),
     ]);
 
     if (!quote || !historical || historical.length < 50) {

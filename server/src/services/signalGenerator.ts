@@ -1,6 +1,6 @@
 import { query } from '../db/index.js';
-import { scanSymbol, MarketSignal } from './marketScanner.js';
-import { getNewsSentimentSummary, fetchSymbolNews, analyzeAndSaveNews } from './newsAnalyzer.js';
+import { scanSymbol, MarketSignal, ScanResult } from './marketScanner.js';
+import { getNewsSentimentSummary } from './newsAnalyzer.js';
 
 interface SignalContext {
   symbol: string;
@@ -105,12 +105,18 @@ export async function generateSignal(symbol: string): Promise<ActionableSignal |
     console.log(`🎯 Generating signal for ${symbol}...`);
 
     // Gather all context
-    const technicalSignals = await scanSymbol(symbol);
+    const scanResult = await scanSymbol(symbol);
     const newsSentiment = await getNewsSentimentSummary(symbol);
     const recentPerformance = await getRecentPerformance(symbol);
 
-    // Get current price from signals
-    const currentPrice = technicalSignals.length > 0 ? technicalSignals[0].priceAtSignal : 0;
+    // Get current price from scan result
+    if (!scanResult) {
+      console.log(`⚠️ No scan data for ${symbol}`);
+      return null;
+    }
+
+    const currentPrice = scanResult.price;
+    const technicalSignals = scanResult.signals;
 
     if (currentPrice === 0) {
       console.log(`⚠️ No price data for ${symbol}`);
@@ -267,12 +273,12 @@ function generateReasoning(
   if (techScore > 40) {
     const bullishSignals = context.technicalSignals.filter(s => s.direction === 'bullish');
     if (bullishSignals.length > 0) {
-      reasons.push(`Strong technical setup: ${bullishSignals.map(s => s.type).join(', ')}`);
+      reasons.push(`Strong technical setup: ${bullishSignals.map(s => s.signalType).join(', ')}`);
     }
   } else if (techScore < -40) {
     const bearishSignals = context.technicalSignals.filter(s => s.direction === 'bearish');
     if (bearishSignals.length > 0) {
-      reasons.push(`Weak technical setup: ${bearishSignals.map(s => s.type).join(', ')}`);
+      reasons.push(`Weak technical setup: ${bearishSignals.map(s => s.signalType).join(', ')}`);
     }
   } else if (context.technicalSignals.length > 0) {
     reasons.push('Mixed technical signals - no clear direction');
