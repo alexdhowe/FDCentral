@@ -1,8 +1,12 @@
 import { query } from '../db/index.js';
 
 // Finnhub API for news
-const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || '';
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
+
+// Get API key at runtime to ensure dotenv has loaded
+function getApiKey(): string {
+  return process.env.FINNHUB_API_KEY || '';
+}
 
 interface NewsItem {
   id: number;
@@ -67,7 +71,7 @@ export async function fetchSymbolNews(symbol: string): Promise<NewsItem[]> {
     const toDate = today.toISOString().split('T')[0];
 
     const response = await fetch(
-      `${FINNHUB_BASE_URL}/company-news?symbol=${symbol}&from=${fromDate}&to=${toDate}&token=${FINNHUB_API_KEY}`
+      `${FINNHUB_BASE_URL}/company-news?symbol=${symbol}&from=${fromDate}&to=${toDate}&token=${getApiKey()}`
     );
 
     if (!response.ok) {
@@ -89,7 +93,7 @@ export async function fetchSymbolNews(symbol: string): Promise<NewsItem[]> {
 export async function fetchMarketNews(): Promise<NewsItem[]> {
   try {
     const response = await fetch(
-      `${FINNHUB_BASE_URL}/news?category=general&token=${FINNHUB_API_KEY}`
+      `${FINNHUB_BASE_URL}/news?category=general&token=${getApiKey()}`
     );
 
     if (!response.ok) {

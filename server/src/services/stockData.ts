@@ -1,6 +1,10 @@
 // Finnhub Stock Data Service - Much more reliable than Yahoo Finance
-const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || 'demo';
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
+
+// Get API key at runtime (not module load time) to ensure dotenv has loaded
+function getApiKey(): string {
+  return process.env.FINNHUB_API_KEY || 'demo';
+}
 
 // Simple in-memory cache to reduce API calls
 const cache = new Map<string, { data: any; timestamp: number }>();
@@ -19,7 +23,7 @@ function setCache(key: string, data: any): void {
 }
 
 async function finnhubFetch(endpoint: string): Promise<any> {
-  const url = `${FINNHUB_BASE_URL}${endpoint}${endpoint.includes('?') ? '&' : '?'}token=${FINNHUB_API_KEY}`;
+  const url = `${FINNHUB_BASE_URL}${endpoint}${endpoint.includes('?') ? '&' : '?'}token=${getApiKey()}`;
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Finnhub API error: ${response.status} ${response.statusText}`);
